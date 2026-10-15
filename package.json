@@ -1,1 +1,38 @@
-{"name":"ja-electrical-solutions","version":"0.1.0","private":true,"scripts":{"dev":"next dev","build":"next build","start":"next start","lint":"next lint","test":"node --import tsx --test tests/**/*.test.ts"},"dependencies":{"@supabase/ssr":"latest","@supabase/supabase-js":"latest","clsx":"latest","lucide-react":"latest","next":"latest","pdf-lib":"^1.17.1","react":"latest","react-dom":"latest","resend":"^6.33.0","tailwind-merge":"latest","zod":"^4.6.7"},"devDependencies":{"@tailwindcss/postcss":"latest","@types/node":"latest","@types/react":"latest","@types/react-dom":"latest","postcss":"latest","tailwindcss":"latest","tsx":"^4.23.15","typescript":"latest"},"engines":{"node":">=20"}}
+{
+  "name": "ja-electrical-solutions",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint .",
+    "test": "node --import tsx --test tests/**/*.test.ts"
+  },
+  "dependencies": {
+    "@supabase/ssr": "latest",
+    "@supabase/supabase-js": "latest",
+    "clsx": "latest",
+    "lucide-react": "latest",
+    "next": "latest",
+    "pdf-lib": "^1.17.1",
+    "react": "latest",
+    "react-dom": "latest",
+    "resend": "^6.33.0",
+    "tailwind-merge": "latest",
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "latest",
+    "@types/node": "latest",
+    "@types/react": "latest",
+    "@types/react-dom": "latest",
+    "postcss": "latest",
+    "tailwindcss": "latest",
+    "tsx": "^4.23.15",
+    "typescript": "latest"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
