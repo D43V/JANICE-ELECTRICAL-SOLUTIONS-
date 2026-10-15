@@ -25,3 +25,10 @@ create policy quotation_versions_admin on public.quotation_versions for all to a
 create policy email_logs_admin on public.email_logs for all to authenticated using (public.is_admin()) with check (public.is_admin());
 create policy audit_logs_admin on public.audit_logs for all to authenticated using (public.is_admin()) with check (public.is_admin());
 revoke all on public.next_quotation_reference() from public; grant execute on function public.next_quotation_reference() to service_role;
+
+insert into public.services (name, slug, description, category, pricing_type, base_price, unit_name)
+values
+  ('Electrical installations', 'install', 'Professional electrical installation services.', 'Electrical', 'fixed', 85000, 'project'),
+  ('Maintenance & repairs', 'repair', 'Electrical maintenance and repair support.', 'Maintenance', 'per_unit', 45000, 'visit'),
+  ('Power & backup solutions', 'backup', 'Power backup assessment and installation.', 'Power', 'custom', 120000, 'project')
+on conflict (slug) do nothing;
