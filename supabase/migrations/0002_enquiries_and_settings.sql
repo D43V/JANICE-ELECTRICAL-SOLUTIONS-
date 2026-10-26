@@ -1,0 +1,10 @@
+create table if not exists public.enquiries (id uuid primary key default gen_random_uuid(), name text not null, email text not null, phone text not null default '', message text not null, status text not null default 'new' check (status in ('new','read','resolved')), created_at timestamptz not null default now(), updated_at timestamptz not null default now());
+create index if not exists enquiries_status_idx on public.enquiries(status);
+create index if not exists enquiries_created_idx on public.enquiries(created_at desc);
+alter table public.enquiries enable row level security;
+create policy enquiries_admin on public.enquiries for all to authenticated using (public.is_admin()) with check (public.is_admin());
+revoke all on public.enquiries from anon, authenticated;
+grant select, insert, update on public.enquiries to authenticated;
+create or replace function public.submit_enquiry(p_name text, p_email text, p_phone text, p_message text) returns uuid language plpgsql security definer set search_path = public as $$ declare enquiry_id uuid; begin if length(trim(p_name)) < 2 or length(trim(p_message)) < 5 then raise exception 'invalid enquiry'; end if; insert into public.enquiries(name,email,phone,message) values (trim(p_name), lower(trim(p_email)), trim(p_phone), trim(p_message)) returning id into enquiry_id; return enquiry_id; end; $$;
+revoke all on function public.submit_enquiry(text,text,text,text) from public;
+grant execute on function public.submit_enquiry(text,text,text,text) to anon;

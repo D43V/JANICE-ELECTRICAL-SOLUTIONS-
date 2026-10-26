@@ -1,0 +1,3 @@
+export type PricingLine={quantity:number;unitPriceMinor:number;addonMinor?:number}
+export function calculateQuote(lines:PricingLine[],additionalMinor=0,discountMinor=0,taxMinor=0){for(const line of lines){if(!Number.isInteger(line.quantity)||line.quantity<=0)throw new Error('Invalid quantity');if(!Number.isInteger(line.unitPriceMinor)||line.unitPriceMinor<0)throw new Error('Invalid price')}const subtotal=lines.reduce((sum,line)=>sum+(line.quantity*line.unitPriceMinor)+(line.addonMinor??0),0);const total=subtotal+additionalMinor-taxSafe(discountMinor)+taxMinor;return {subtotal,additionalMinor,discountMinor,taxMinor,total}}
+function taxSafe(value:number){if(!Number.isInteger(value)||value<0)throw new Error('Invalid discount');return value}
