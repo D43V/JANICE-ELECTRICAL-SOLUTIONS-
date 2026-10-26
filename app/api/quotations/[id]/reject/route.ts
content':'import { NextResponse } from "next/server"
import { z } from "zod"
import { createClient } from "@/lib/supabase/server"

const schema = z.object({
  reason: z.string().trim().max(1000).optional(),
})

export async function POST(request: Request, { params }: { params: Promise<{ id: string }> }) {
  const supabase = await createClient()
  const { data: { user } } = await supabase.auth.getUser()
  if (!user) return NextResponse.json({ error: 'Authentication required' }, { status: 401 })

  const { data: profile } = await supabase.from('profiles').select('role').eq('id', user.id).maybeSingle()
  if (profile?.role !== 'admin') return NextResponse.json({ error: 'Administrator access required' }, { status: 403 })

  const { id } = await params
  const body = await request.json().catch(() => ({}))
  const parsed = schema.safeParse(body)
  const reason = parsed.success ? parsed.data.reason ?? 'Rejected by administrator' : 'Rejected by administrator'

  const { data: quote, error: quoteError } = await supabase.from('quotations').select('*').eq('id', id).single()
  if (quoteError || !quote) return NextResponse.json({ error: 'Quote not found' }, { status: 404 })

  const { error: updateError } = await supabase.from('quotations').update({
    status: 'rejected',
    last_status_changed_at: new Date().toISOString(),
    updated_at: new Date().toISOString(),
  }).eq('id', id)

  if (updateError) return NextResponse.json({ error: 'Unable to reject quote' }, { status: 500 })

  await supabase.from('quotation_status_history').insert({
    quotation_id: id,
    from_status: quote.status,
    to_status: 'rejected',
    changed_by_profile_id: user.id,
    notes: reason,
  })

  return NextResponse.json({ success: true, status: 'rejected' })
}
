@@ -1,0 +1,127 @@
+supabase/migrations/0007_rls_security.sql
+content':'alter table public.profiles enable row level security;
+alter table public.business_settings enable row level security;
+alter table public.service_categories enable row level security;
+alter table public.services enable row level security;
+alter table public.quotations enable row level security;
+alter table public.quotation_items enable row level security;
+alter table public.quotation_status_history enable row level security;
+alter table public.quotation_events enable row level security;
+alter table public.quote_versions enable row level security;
+alter table public.email_logs enable row level security;
+alter table public.pdf_snapshots enable row level security;
+alter table public.admin_audit_log enable row level security;
+
+create policy "public read services"
+on public.services
+for select
+using (is_active = true and is_public = true);
+
+create policy "public read categories"
+on public.service_categories
+for select
+using (is_active = true);
+
+create policy "admin manage profiles"
+on public.profiles
+for all
+using (public.is_admin())
+with check (public.is_admin());
+
+create policy "admin manage business settings"
+on public.business_settings
+for all
+using (public.is_admin())
+with check (public.is_admin());
+
+create policy "admin manage categories"
+on public.service_categories
+for all
+using (public.is_admin())
+with check (public.is_admin());
+
+create policy "admin manage services"
+on public.services
+for all
+using (public.is_admin())
+with check (public.is_admin());
+
+create policy "admin manage quotations"
+on public.quotations
+for all
+using (public.is_admin())
+with check (public.is_admin());
+
+create policy "admin manage quotation items"
+on public.quotation_items
+for all
+using (public.is_admin())
+with check (public.is_admin());
+
+create policy "admin manage status history"
+on public.quotation_status_history
+for all
+using (public.is_admin())
+with check (public.is_admin());
+
+create policy "admin manage quote events"
+on public.quotation_events
+for all
+using (public.is_admin())
+with check (public.is_admin());
+
+create policy "admin manage quote versions"
+on public.quote_versions
+for all
+using (public.is_admin())
+with check (public.is_admin());
+
+create policy "admin manage email logs"
+on public.email_logs
+for all
+using (public.is_admin())
+with check (public.is_admin());
+
+create policy "admin manage pdf snapshots"
+on public.pdf_snapshots
+for all
+using (public.is_admin())
+with check (public.is_admin());
+
+create policy "admin manage audit log"
+on public.admin_audit_log
+for all
+using (public.is_admin())
+with check (public.is_admin());
+
+create policy "owner can read their quotations"
+on public.quotations
+for select
+using (created_by_profile_id = auth.uid() or public.is_admin());
+
+create policy "owner can insert quotations"
+on public.quotations
+for insert
+with check (created_by_profile_id = auth.uid() or public.is_admin());
+
+create policy "owner can update draft quotations"
+on public.quotations
+for update
+using (status = 'draft' and (created_by_profile_id = auth.uid() or public.is_admin()))
+with check (status = 'draft' and (created_by_profile_id = auth.uid() or public.is_admin()));
+
+create policy "owner can read quote items"
+on public.quotation_items
+for select
+using (exists (
+  select 1 from public.quotations q
+  where q.id = quotation_id and (q.created_by_profile_id = auth.uid() or public.is_admin())
+));
+
+create policy "owner can insert quote items"
+on public.quotation_items
+for insert
+with check (exists (
+  select 1 from public.quotations q
+  where q.id = quotation_id and q.created_by_profile_id = auth.uid()
+));

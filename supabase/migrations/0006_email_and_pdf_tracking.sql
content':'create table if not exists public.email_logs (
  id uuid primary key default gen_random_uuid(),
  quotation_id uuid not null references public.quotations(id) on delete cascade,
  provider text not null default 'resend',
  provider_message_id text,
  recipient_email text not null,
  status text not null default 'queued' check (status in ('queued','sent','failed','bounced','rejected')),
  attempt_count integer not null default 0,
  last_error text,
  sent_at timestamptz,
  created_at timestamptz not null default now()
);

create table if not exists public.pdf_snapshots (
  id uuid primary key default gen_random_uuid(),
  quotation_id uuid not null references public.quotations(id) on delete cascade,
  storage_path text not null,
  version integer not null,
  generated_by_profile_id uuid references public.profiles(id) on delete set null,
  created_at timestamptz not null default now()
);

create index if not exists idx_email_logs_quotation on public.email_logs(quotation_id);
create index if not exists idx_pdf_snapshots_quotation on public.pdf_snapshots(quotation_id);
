@@ -1,0 +1,266 @@
+supabase/migrations/0005_quotation_lifecycle.sql
+content':'create table if not exists public.quotations (
+  id uuid primary key default gen_random_uuid(),
+  quote_ref text not null unique,
+  customer_name text not null,
+  customer_email text not null,
+  customer_phone text,
+  customer_company text,
+  project_notes text,
+  preferred_contact text not null default 'email' check (preferred_contact in ('phone','email','whatsapp')),
+  status text not null default 'submitted' check (status in ('draft','submitted','reviewed','approved','sent','paid','rejected','expired','cancelled')),
+  subtotal numeric(12,2) not null default 0,
+  tax_amount numeric(12,2) not null default 0,
+  total numeric(12,2) not null default 0,
+  currency text not null default 'ZAR',
+  valid_until timestamptz,
+  created_by_profile_id uuid references public.profiles(id) on delete set null,
+  approved_by_profile_id uuid references public.profiles(id) on delete set null,
+  sent_at timestamptz,
+  last_status_changed_at timestamptz not null default now(),
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create trigger quotations_set_updated_at
+before update on public.quotations
+for each row
+execute function set_updated_at();
+
+create table if not exists public.quotation_items (
+  id uuid primary key default gen_random_uuid(),
+  quotation_id uuid not null references public.quotations(id) on delete cascade,
+  service_id uuid not null references public.services(id),
+  category_id uuid references public.service_categories(id),
+  service_name_snapshot text not null,
+  description_snapshot text,
+  unit_price_snapshot numeric(12,2) not null,
+  quantity numeric(12,2) not null check (quantity > 0),
+  pricing_type text not null,
+  discount_amount numeric(12,2) not null default 0,
+  tax_amount numeric(12,2) not null default 0,
+  line_total numeric(12,2) not null default 0,
+  metadata jsonb not null default '{}'::jsonb,
+  created_at timestamptz not null default now()
+);
+
+create table if not exists public.quotation_status_history (
+  id uuid primary key default gen_random_uuid(),
+  quotation_id uuid not null references public.quotations(id) on delete cascade,
+  from_status text,
+  to_status text not null,
+  changed_by_profile_id uuid references public.profiles(id) on delete set null,
+  notes text,
+  created_at timestamptz not null default now()
+);
+
+create table if not exists public.quotation_events (
+  id uuid primary key default gen_random_uuid(),
+  quotation_id uuid not null references public.quotations(id) on delete cascade,
+  event_type text not null,
+  payload jsonb not null default '{}'::jsonb,
+  created_by_profile_id uuid references public.profiles(id) on delete set null,
+  created_at timestamptz not null default now()
+);
+
+create table if not exists public.quote_versions (
+  id uuid primary key default gen_random_uuid(),
+  quotation_id uuid not null references public.quotations(id) on delete cascade,
+  version integer not null,
+  snapshot jsonb not null,
+  created_by_profile_id uuid references public.profiles(id) on delete set null,
+  created_at timestamptz not null default now(),
+  unique (quotation_id, version)
+);
+
+create table if not exists public.admin_audit_log (
+  id uuid primary key default gen_random_uuid(),
+  actor_profile_id uuid references public.profiles(id) on delete set null,
+  action text not null,
+  table_name text not null,
+  record_id uuid,
+  details jsonb not null default '{}'::jsonb,
+  created_at timestamptz not null default now()
+);
+
+create or replace function public.generate_quote_ref()
+returns trigger
+language plpgsql
+as $$
+declare
+  next_num integer;
+begin
+  if new.quote_ref is null or new.quote_ref = '' then
+    next_num := floor(random() * 900000) + 100000;
+    new.quote_ref := 'Q-' || to_char(now(), 'YYYYMMDD') || '-' || next_num::text;
+  end if;
+  return new;
+end;
+$$;
+
+create trigger quotations_generate_ref
+before insert on public.quotations
+for each row
+execute function public.generate_quote_ref();
+
+create index if not exists idx_quotation_items_quotation on public.quotation_items(quotation_id);
+create index if not exists idx_quotation_history_quotation on public.quotation_status_history(quotation_id);
+create index if not exists idx_quote_events_quotation on public.quotation_events(quotation_id);
+create index if not exists idx_quote_versions_quotation on public.quote_versions(quotation_id);
+
+create table if not exists public.email_logs (
+  id uuid primary key default gen_random_uuid(),
+  quotation_id uuid not null references public.quotations(id) on delete cascade,
+  provider text not null default 'resend',
+  provider_message_id text,
+  recipient_email text not null,
+  status text not null default 'queued' check (status in ('queued','sent','failed','bounced','rejected')),
+  attempt_count integer not null default 0,
+  last_error text,
+  sent_at timestamptz,
+  created_at timestamptz not null default now()
+);
+
+create table if not exists public.pdf_snapshots (
+  id uuid primary key default gen_random_uuid(),
+  quotation_id uuid not null references public.quotations(id) on delete cascade,
+  storage_path text not null,
+  version integer not null,
+  generated_by_profile_id uuid references public.profiles(id) on delete set null,
+  created_at timestamptz not null default now()
+);
+
+create index if not exists idx_email_logs_quotation on public.email_logs(quotation_id);
+create index if not exists idx_pdf_snapshots_quotation on public.pdf_snapshots(quotation_id);
+
+create or replace function public.is_admin()
+returns boolean
+language sql
+stable
+as $$
+  select coalesce((select is_admin from public.profiles where id = auth.uid()), false);
+$$;
+
+create or replace function public.is_quote_owner(quote_id uuid)
+returns boolean
+language sql
+stable
+as $$
+  select exists (
+    select 1
+    from public.quotations q
+    where q.id = quote_id
+      and (q.created_by_profile_id = auth.uid() or public.is_admin())
+  );
+$$;
+
+alter table public.profiles enable row level security;
+alter table public.business_settings enable row level security;
+alter table public.service_categories enable row level security;
+alter table public.services enable row level security;
+alter table public.quotations enable row level security;
+alter table public.quotation_items enable row level security;
+alter table public.quotation_status_history enable row level security;
+alter table public.quotation_events enable row level security;
+alter table public.quote_versions enable row level security;
+alter table public.email_logs enable row level security;
+alter table public.pdf_snapshots enable row level security;
+alter table public.admin_audit_log enable row level security;
+
+create policy "public read active public services"
+on public.services
+for select
+using (is_active = true and is_public = true);
+
+create policy "public read active categories"
+on public.service_categories
+for select
+using (is_active = true);
+
+create policy "admin manage profiles"
+on public.profiles
+for all
+using (public.is_admin())
+with check (public.is_admin());
+
+create policy "admin manage settings"
+on public.business_settings
+for all
+using (public.is_admin())
+with check (public.is_admin());
+
+create policy "admin manage categories"
+on public.service_categories
+for all
+using (public.is_admin())
+with check (public.is_admin());
+
+create policy "admin manage services"
+on public.services
+for all
+using (public.is_admin())
+with check (public.is_admin());
+
+create policy "admin manage quotations"
+on public.quotations
+for all
+using (public.is_admin())
+with check (public.is_admin());
+
+create policy "owner or admin read quotations"
+on public.quotations
+for select
+using (created_by_profile_id = auth.uid() or public.is_admin());
+
+create policy "owner can insert quote"
+on public.quotations
+for insert
+with check (created_by_profile_id = auth.uid() or public.is_admin());
+
+create policy "owner can update draft quote"
+on public.quotations
+for update
+using (status = 'draft' and (created_by_profile_id = auth.uid() or public.is_admin()))
+with check (status = 'draft' and (created_by_profile_id = auth.uid() or public.is_admin()));
+
+create policy "admin manage quotation items"
+on public.quotation_items
+for all
+using (public.is_admin())
+with check (public.is_admin());
+
+create policy "admin manage quote history"
+on public.quotation_status_history
+for all
+using (public.is_admin())
+with check (public.is_admin());
+
+create policy "admin manage quote events"
+on public.quotation_events
+for all
+using (public.is_admin())
+with check (public.is_admin());
+
+create policy "admin manage versions"
+on public.quote_versions
+for all
+using (public.is_admin())
+with check (public.is_admin());
+
+create policy "admin manage email logs"
+on public.email_logs
+for all
+using (public.is_admin())
+with check (public.is_admin());
+
+create policy "admin manage pdf snapshots"
+on public.pdf_snapshots
+for all
+using (public.is_admin())
+with check (public.is_admin());
+
+create policy "admin manage audit log"
+on public.admin_audit_log
+for all
+using (public.is_admin())
+with check (public.is_admin());

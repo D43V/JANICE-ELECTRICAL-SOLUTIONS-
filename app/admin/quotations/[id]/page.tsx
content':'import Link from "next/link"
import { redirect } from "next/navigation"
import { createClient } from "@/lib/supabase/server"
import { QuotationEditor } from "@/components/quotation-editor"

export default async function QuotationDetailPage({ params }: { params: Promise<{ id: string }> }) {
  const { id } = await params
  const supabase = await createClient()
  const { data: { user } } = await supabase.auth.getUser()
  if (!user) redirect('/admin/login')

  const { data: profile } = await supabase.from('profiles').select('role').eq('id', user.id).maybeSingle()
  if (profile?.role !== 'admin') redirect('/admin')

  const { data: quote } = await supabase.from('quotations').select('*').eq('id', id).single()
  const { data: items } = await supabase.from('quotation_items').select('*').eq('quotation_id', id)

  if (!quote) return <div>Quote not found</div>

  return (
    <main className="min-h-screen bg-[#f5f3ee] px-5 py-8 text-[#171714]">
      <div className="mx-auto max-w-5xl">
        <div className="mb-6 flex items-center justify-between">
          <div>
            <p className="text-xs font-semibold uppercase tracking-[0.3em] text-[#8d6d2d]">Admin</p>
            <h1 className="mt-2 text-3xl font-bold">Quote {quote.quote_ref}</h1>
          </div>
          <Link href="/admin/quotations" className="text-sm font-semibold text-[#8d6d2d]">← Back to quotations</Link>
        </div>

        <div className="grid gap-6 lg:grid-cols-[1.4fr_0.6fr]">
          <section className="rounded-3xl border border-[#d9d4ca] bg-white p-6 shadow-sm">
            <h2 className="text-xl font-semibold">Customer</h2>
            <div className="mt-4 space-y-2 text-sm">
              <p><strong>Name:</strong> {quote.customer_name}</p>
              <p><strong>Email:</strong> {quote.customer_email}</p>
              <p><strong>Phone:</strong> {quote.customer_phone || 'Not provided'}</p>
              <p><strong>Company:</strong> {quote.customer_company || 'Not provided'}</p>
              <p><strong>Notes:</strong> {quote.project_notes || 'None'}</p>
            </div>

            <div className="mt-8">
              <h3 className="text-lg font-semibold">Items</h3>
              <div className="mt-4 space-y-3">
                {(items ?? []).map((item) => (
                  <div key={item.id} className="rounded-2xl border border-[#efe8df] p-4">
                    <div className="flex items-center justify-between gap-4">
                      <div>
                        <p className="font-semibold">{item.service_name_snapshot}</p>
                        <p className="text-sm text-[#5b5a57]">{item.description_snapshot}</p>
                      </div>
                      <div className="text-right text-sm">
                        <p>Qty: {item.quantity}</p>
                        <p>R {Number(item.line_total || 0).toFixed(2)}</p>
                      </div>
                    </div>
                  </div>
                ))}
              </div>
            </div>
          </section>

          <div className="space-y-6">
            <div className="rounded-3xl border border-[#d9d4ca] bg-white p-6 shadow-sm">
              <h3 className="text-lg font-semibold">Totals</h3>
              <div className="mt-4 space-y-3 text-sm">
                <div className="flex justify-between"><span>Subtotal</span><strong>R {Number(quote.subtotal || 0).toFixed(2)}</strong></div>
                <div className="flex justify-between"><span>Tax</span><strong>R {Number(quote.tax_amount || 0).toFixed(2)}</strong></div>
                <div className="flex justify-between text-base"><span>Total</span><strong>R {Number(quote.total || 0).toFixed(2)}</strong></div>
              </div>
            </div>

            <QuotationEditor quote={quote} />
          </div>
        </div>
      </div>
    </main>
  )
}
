@@ -1,0 +1,59 @@
+app/admin/quotations/page.tsx
+content':'import Link from "next/link"
+import { redirect } from "next/navigation"
+import { createClient } from "@/lib/supabase/server"
+
+export default async function QuotationsPage() {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) redirect('/admin/login')
+
+  const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).maybeSingle()
+  if (profile?.role !== 'admin') redirect('/admin')
+
+  const { data: quotations } = await supabase
+    .from('quotations')
+    .select('id, quote_ref, status, total, created_at, customer_name, customer_email')
+    .order('created_at', { ascending: false })
+
+  return (
+    <main className="min-h-screen bg-[#f5f3ee] px-5 py-8 text-[#171714]">
+      <div className="mx-auto max-w-6xl">
+        <div className="mb-6 flex items-center justify-between">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.3em] text-[#8d6d2d]">Admin</p>
+            <h1 className="mt-2 text-3xl font-bold">Quotations</h1>
+          </div>
+          <Link href="/admin" className="text-sm font-semibold text-[#8d6d2d]">← Overview</Link>
+        </div>
+
+        <section className="overflow-hidden rounded-3xl border border-[#d9d4ca] bg-white shadow-sm">
+          <table className="min-w-full text-left text-sm">
+            <thead className="bg-[#f3efe8] text-[#3b3a36]">
+              <tr>
+                <th className="px-5 py-4">Reference</th>
+                <th className="px-5 py-4">Customer</th>
+                <th className="px-5 py-4">Status</th>
+                <th className="px-5 py-4">Total</th>
+                <th className="px-5 py-4">Created</th>
+                <th className="px-5 py-4">Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              {(quotations ?? []).map((quotation) => (
+                <tr key={quotation.id} className="border-t border-[#eee9e3]">
+                  <td className="px-5 py-4 font-medium">{quotation.quote_ref}</td>
+                  <td className="px-5 py-4">{quotation.customer_name}<br /><span className="text-xs text-[#6b6a66]">{quotation.customer_email}</span></td>
+                  <td className="px-5 py-4 uppercase tracking-[0.15em] text-[#8d6d2d]">{quotation.status}</td>
+                  <td className="px-5 py-4">R {Number(quotation.total || 0).toFixed(2)}</td>
+                  <td className="px-5 py-4">{new Date(quotation.created_at).toLocaleDateString()}</td>
+                  <td className="px-5 py-4"><Link href={`/admin/quotations/${quotation.id}`} className="font-semibold text-[#8d6d2d]">Open</Link></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </section>
+      </div>
+    </main>
+  )
+}

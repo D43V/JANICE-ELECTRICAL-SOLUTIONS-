@@ -1,0 +1,51 @@
+components/quotation-editor.tsx
+content':'"use client"
+
+import { useState } from "react"
+
+export function QuotationEditor({ quote }: { quote: any }) {
+  const [status, setStatus] = useState(quote?.status ?? 'submitted')
+  const [loading, setLoading] = useState(false)
+
+  async function handleAction(action: 'approve' | 'reject' | 'send') {
+    setLoading(true)
+
+    try {
+      const url = action === 'approve'
+        ? `/api/quotations/${quote.id}/approve`
+        : action === 'reject'
+          ? `/api/quotations/${quote.id}/reject`
+          : `/api/quotations/${quote.id}/send`
+
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ notes: `Updated by admin (${action})` }),
+      })
+
+      if (!response.ok) throw new Error('Action failed')
+
+      const payload = await response.json()
+      if (payload.status) setStatus(payload.status)
+    } catch (error) {
+      console.error(error)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <div className="rounded-3xl border border-[#d9d4ca] bg-white p-6 shadow-sm">
+      <div className="mb-4 flex items-center justify-between">
+        <h3 className="text-xl font-semibold text-[#101d35]">Quote actions</h3>
+        <span className="rounded-full bg-[#efe9d7] px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-[#8d6d2d]">{status}</span>
+      </div>
+
+      <div className="flex flex-wrap gap-3">
+        <button disabled={loading} onClick={() => handleAction('approve')} className="rounded-xl bg-[#101d35] px-4 py-3 text-sm font-semibold text-white">Approve</button>
+        <button disabled={loading} onClick={() => handleAction('reject')} className="rounded-xl border border-[#d7d2ca] bg-white px-4 py-3 text-sm font-semibold text-[#101d35]">Reject</button>
+        <button disabled={loading} onClick={() => handleAction('send')} className="rounded-xl bg-[#c7a55a] px-4 py-3 text-sm font-semibold text-[#101d35]">Send</button>
+      </div>
+    </div>
+  )
+}

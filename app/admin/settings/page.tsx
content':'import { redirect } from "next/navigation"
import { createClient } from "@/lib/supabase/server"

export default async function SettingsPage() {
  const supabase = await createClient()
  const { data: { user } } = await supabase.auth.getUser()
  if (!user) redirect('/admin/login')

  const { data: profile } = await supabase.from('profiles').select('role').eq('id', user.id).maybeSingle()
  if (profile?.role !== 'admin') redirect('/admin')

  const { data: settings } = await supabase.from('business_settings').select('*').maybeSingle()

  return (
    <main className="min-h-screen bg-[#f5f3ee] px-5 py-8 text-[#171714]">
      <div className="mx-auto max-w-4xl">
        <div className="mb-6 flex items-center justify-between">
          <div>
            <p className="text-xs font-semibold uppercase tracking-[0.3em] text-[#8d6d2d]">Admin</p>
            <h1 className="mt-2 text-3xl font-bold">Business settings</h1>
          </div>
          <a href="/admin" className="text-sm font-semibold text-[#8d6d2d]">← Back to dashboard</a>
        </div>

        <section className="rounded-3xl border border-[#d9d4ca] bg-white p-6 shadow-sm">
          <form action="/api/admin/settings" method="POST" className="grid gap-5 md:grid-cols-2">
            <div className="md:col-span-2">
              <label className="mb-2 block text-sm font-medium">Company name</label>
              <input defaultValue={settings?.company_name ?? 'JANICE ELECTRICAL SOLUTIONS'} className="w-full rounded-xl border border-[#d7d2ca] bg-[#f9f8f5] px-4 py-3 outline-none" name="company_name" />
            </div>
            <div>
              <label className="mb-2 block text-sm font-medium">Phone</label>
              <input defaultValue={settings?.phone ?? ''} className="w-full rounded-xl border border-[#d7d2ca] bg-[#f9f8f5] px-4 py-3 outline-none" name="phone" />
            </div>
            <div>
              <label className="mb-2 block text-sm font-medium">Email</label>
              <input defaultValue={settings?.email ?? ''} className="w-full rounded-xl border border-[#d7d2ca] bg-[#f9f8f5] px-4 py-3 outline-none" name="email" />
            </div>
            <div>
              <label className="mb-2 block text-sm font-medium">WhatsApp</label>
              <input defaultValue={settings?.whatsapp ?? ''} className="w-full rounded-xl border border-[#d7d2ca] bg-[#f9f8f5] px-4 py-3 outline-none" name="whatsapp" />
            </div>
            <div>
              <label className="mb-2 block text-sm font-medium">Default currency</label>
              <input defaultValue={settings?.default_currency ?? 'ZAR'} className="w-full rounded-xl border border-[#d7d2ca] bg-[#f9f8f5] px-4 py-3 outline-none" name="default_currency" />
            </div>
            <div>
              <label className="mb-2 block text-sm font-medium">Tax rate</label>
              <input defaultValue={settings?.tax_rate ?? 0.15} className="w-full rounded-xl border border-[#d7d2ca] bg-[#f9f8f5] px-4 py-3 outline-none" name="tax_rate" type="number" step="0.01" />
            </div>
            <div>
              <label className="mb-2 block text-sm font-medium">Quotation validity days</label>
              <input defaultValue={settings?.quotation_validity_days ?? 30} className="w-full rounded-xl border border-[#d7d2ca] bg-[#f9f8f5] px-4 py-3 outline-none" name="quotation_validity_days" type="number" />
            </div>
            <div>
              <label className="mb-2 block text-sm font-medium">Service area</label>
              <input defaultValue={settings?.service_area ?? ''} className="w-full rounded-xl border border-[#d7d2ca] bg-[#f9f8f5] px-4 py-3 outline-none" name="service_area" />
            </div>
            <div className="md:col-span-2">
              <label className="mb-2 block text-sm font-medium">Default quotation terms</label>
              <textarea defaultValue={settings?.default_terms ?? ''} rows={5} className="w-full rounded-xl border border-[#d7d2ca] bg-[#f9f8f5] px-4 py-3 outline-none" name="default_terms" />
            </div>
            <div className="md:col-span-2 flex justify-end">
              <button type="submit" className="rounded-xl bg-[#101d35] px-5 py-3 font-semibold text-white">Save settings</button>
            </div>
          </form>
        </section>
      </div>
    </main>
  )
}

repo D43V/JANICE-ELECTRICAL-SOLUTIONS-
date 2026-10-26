@@ -1,0 +1,100 @@
+app/api/quotations/[id]/send/route.ts
+content':'import { NextResponse } from "next/server"
+import { z } from "zod"
+import { createClient } from "@/lib/supabase/server"
+import { createQuotationPdf } from "@/lib/quotation-pdf"
+import { sendQuotationNotification } from "@/lib/email"
+
+const schema = z.object({
+  provider: z.enum(['resend']).default('resend'),
+})
+
+export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
+
+  const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).maybeSingle()
+  if (profile?.role !== 'admin') return NextResponse.json({ error: 'Administrator access required' }, { status: 403 })
+
+  const { id } = await params
+  const body = await request.json().catch(() => ({ provider: 'resend' }))
+  const parsed = schema.safeParse(body)
+  const provider = parsed.success ? parsed.data.provider : 'resend'
+
+  const { data: quote, error: quoteError } = await supabase.from('quotations').select('*').eq('id', id).single()
+  if (quoteError || !quote) return NextResponse.json({ error: 'Quote not found' }, { status: 404 })
+
+  const { data: items } = await supabase.from('quotation_items').select('*').eq('quotation_id', id)
+  const pdfBuffer = await createQuotationPdf({
+    reference: quote.quote_ref,
+    version: 1,
+    customer: quote.customer_name,
+    email: quote.customer_email,
+    subtotal: Number(quote.subtotal || 0),
+    total: Number(quote.total || 0),
+    items: (items ?? []).map((item) => ({
+      description: item.service_name_snapshot || 'Service',
+      quantity: Number(item.quantity || 0),
+      unitPrice: Number(item.unit_price_snapshot || 0),
+      lineTotal: Number(item.line_total || 0),
+    })),
+    companyName: 'JANICE ELECTRICAL SOLUTIONS',
+    companyPhone: '+27 00 000 0000',
+    companyEmail: 'info@janiceelectrical.co.za',
+  })
+
+  const { error: emailLogError } = await supabase.from('email_logs').insert({
+    quotation_id: id,
+    provider,
+    recipient_email: quote.customer_email,
+    status: 'queued',
+    attempt_count: 1,
+  })
+
+  if (emailLogError) {
+    return NextResponse.json({ error: 'Unable to create email log record' }, { status: 500 })
+  }
+
+  try {
+    const result = await sendQuotationNotification({
+      to: quote.customer_email,
+      subject: `Your quotation ${quote.quote_ref}`,
+      html: `<p>Hello ${quote.customer_name},</p><p>Your quotation is ready. Reference: ${quote.quote_ref}</p>`,
+      pdf: pdfBuffer,
+      provider,
+    })
+
+    await supabase.from('email_logs').update({
+      provider_message_id: result.providerMessageId,
+      status: 'sent',
+      sent_at: new Date().toISOString(),
+      attempt_count: 1,
+    }).eq('quotation_id', id).order('created_at', { ascending: false }).limit(1)
+
+    await supabase.from('quotations').update({
+      status: 'sent',
+      sent_at: new Date().toISOString(),
+      last_status_changed_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    }).eq('id', id)
+
+    await supabase.from('quotation_status_history').insert({
+      quotation_id: id,
+      from_status: quote.status,
+      to_status: 'sent',
+      changed_by_profile_id: user.id,
+      notes: 'Quotation sent to customer',
+    })
+
+    return NextResponse.json({ success: true, provider: result.provider, providerMessageId: result.providerMessageId })
+  } catch (error: any) {
+    await supabase.from('email_logs').update({
+      status: 'failed',
+      last_error: error?.message ?? 'Unknown email failure',
+      attempt_count: 1,
+    }).eq('quotation_id', id).order('created_at', { ascending: false }).limit(1)
+
+    return NextResponse.json({ error: 'Quotation email failed to send', details: error?.message ?? 'Unknown email failure' }, { status: 500 })
+  }
+}

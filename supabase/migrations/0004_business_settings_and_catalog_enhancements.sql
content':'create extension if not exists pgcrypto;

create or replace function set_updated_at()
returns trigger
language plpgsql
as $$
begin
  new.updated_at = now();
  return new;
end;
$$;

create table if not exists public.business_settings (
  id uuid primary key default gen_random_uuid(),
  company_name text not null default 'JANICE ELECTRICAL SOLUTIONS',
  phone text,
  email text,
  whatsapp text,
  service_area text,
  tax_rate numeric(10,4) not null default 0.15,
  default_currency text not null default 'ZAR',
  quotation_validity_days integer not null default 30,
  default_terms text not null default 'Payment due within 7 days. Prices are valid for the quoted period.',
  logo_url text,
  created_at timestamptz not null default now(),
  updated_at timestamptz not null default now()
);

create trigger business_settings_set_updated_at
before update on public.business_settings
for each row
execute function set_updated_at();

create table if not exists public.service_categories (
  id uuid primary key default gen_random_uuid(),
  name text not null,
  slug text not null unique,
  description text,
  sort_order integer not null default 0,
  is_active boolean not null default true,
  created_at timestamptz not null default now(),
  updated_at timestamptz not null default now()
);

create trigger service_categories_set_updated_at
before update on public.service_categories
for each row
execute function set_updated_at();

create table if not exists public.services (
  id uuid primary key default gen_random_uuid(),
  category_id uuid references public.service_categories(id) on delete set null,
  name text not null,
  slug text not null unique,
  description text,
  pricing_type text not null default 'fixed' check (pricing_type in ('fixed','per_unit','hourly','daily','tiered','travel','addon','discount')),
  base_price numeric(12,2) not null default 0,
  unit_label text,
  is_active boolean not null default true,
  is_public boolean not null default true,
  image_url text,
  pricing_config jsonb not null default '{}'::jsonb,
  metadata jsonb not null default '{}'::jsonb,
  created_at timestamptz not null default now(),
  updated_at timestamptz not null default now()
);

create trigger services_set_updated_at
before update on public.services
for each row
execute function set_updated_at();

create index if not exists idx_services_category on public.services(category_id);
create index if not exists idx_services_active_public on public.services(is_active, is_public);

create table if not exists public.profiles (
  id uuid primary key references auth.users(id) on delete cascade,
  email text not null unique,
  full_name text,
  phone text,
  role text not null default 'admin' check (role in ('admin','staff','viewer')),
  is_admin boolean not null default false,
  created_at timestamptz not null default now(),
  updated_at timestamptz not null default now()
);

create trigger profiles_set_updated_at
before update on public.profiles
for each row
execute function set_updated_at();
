@@ -1,0 +1,28 @@
+app/get-a-quote/page.tsx
+content':'import { QuoteForm } from "@/components/quote-form"
+import { createClient } from "@/lib/supabase/server"
+
+export default async function QuotePage() {
+  const supabase = await createClient()
+  const { data } = await supabase.from('services').select('id,name,base_price,description').eq('is_active', true).eq('is_public', true).order('name')
+
+  const services = (data ?? []).map((service) => ({
+    id: service.id,
+    name: service.name,
+    price: Number(service.base_price || 0) / 100,
+    description: service.description || 'Professional electrical service',
+  }))
+
+  return (
+    <main className="bg-[#f3f1ee] py-14 text-[#121212]">
+      <div className="container mx-auto max-w-6xl px-5">
+        <div className="mb-10 text-center">
+          <p className="eyebrow text-[#8d6d2d]">Start your quote</p>
+          <h1 className="mt-3 text-4xl font-semibold text-[#101d35]">Request a tailored quotation</h1>
+        </div>
+
+        <QuoteForm services={services} />
+      </div>
+    </main>
+  )
+}
