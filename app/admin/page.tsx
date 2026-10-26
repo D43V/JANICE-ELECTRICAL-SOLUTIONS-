@@ -2,18 +2,81 @@ import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 
-export default async function Admin() {
+export default async function AdminHomePage() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/admin/login')
+
   const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).maybeSingle()
-  if (profile?.role !== 'admin') return <main className="min-h-screen bg-[#101D35] px-5 py-20 text-white"><div className="mx-auto max-w-md text-center"><p className="text-sm tracking-[.28em] text-[#c9a24d]">JA / ADMIN</p><h1 className="mt-8 text-3xl font-semibold">Administrator access required</h1><p className="mt-4 text-sm text-white/60">Your account is authenticated but is not authorised to access this area.</p></div></main>
-  const [{ count: total }, { count: underReview }, { count: accepted }, { data: recent }] = await Promise.all([
+  if (profile?.role !== 'admin') {
+    return (
+      <main className="min-h-screen bg-[#101d35] px-5 py-20 text-white">
+        <div className="mx-auto max-w-md rounded-2xl border border-white/10 bg-white/5 p-8 text-center">
+          <p className="text-sm uppercase tracking-[0.28em] text-[#d4af65]">Access denied</p>
+          <p className="mt-3 text-lg">You do not have administrator access.</p>
+        </div>
+      </main>
+    )
+  }
+
+  const [{ count: total }, { count: newRequests }, { count: underReview }, { count: accepted }, { data: recent }] = await Promise.all([
     supabase.from('quotations').select('id', { count: 'exact', head: true }),
+    supabase.from('quotations').select('id', { count: 'exact', head: true }).eq('status', 'new'),
     supabase.from('quotations').select('id', { count: 'exact', head: true }).eq('status', 'under_review'),
     supabase.from('quotations').select('id', { count: 'exact', head: true }).eq('status', 'accepted'),
     supabase.from('quotations').select('reference,status,total_amount,submitted_at').order('submitted_at', { ascending: false }).limit(5),
   ])
-  return <main className="min-h-screen bg-[#F3F5F8] px-5 py-8 text-[#101D35]"><div className="mx-auto max-w-6xl"><div className="flex items-start justify-between"><div><p className="text-sm font-semibold tracking-[.25em] text-[#8d6d2d]">JA / ADMIN</p><h1 className="mt-4 text-4xl font-semibold tracking-tight">Overview</h1></div><form action="/auth/signout" method="post"><button className="min-h-11 rounded-full border border-[#d7d2c7] px-4 py-2 text-sm">Sign out</button></form></div><div className="mt-10 grid gap-4 sm:grid-cols-3"><Metric label="Quotation requests" value={total ?? 0}/><Metric label="Under review" value={underReview ?? 0}/><Metric label="Accepted" value={accepted ?? 0}/></div><section className="mt-8 rounded-2xl border border-[#dfdbd1] bg-white p-6"><div className="flex items-center justify-between gap-4"><div><h2 className="text-xl font-semibold">Recent quotations</h2><p className="mt-2 text-sm text-black/55">Live requests from Supabase.</p></div><Link href="/admin/quotations" className="min-h-11 rounded-full bg-[#171714] px-4 py-3 text-sm font-semibold text-white">View all</Link></div><div className="mt-6 flex flex-col gap-3">{recent?.length ? recent.map((quote) => <div key={quote.reference} className="flex items-center justify-between gap-4 rounded-xl border border-[#eeeae2] p-4"><div><p className="font-semibold">{quote.reference}</p><p className="text-sm text-black/55">{quote.status}</p></div><p className="font-semibold">K{(quote.total_amount / 100).toLocaleString(undefined, { minimumFractionDigits: 2 })}</p></div>) : <p className="rounded-xl border border-dashed p-5 text-sm text-black/55">No quotation requests yet.</p>}</div></section></div></main>
+
+  const metrics = [
+    { label: 'Total quotation requests', value: total ?? 0 },
+    { label: 'New requests', value: newRequests ?? 0 },
+    { label: 'Under review', value: underReview ?? 0 },
+    { label: 'Accepted quotations', value: accepted ?? 0 },
+  ]
+
+  return (
+    <main className="min-h-screen bg-[#f5f3ee] px-5 py-8 text-[#171714]">
+      <div className="mx-auto max-w-6xl space-y-6">
+        <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+          <div>
+            <p className="text-sm uppercase tracking-[0.24em] text-[#8d6d2d]">Dashboard</p>
+            <h1 className="mt-2 text-3xl font-semibold">JA operations overview</h1>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <Link href="/admin/quotations" className="rounded-xl bg-[#101d35] px-4 py-2 text-sm font-semibold text-white">Quotations</Link>
+            <Link href="/admin/services" className="rounded-xl border border-[#d6dfe8] bg-white px-4 py-2 text-sm font-semibold text-[#101d35]">Services</Link>
+            <Link href="/admin/settings" className="rounded-xl border border-[#d6dfe8] bg-white px-4 py-2 text-sm font-semibold text-[#101d35]">Settings</Link>
+          </div>
+        </div>
+
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+          {metrics.map((metric) => (
+            <div key={metric.label} className="rounded-2xl border border-[#dfe5ef] bg-white p-5 shadow-sm">
+              <p className="text-sm text-[#5c687b]">{metric.label}</p>
+              <p className="mt-4 text-3xl font-semibold text-[#101d35]">{metric.value}</p>
+            </div>
+          ))}
+        </div>
+
+        <div className="rounded-2xl border border-[#dfe5ef] bg-white p-6">
+          <h2 className="text-xl font-semibold">Recent quotation activity</h2>
+          <div className="mt-4 space-y-3">
+            {(recent ?? []).length === 0 ? <p className="text-sm text-[#5c687b]">No recent activity.</p> : null}
+            {(recent ?? []).map((item) => (
+              <div key={item.reference} className="flex items-center justify-between border-b border-[#edf1f6] pb-3 last:border-b-0 last:pb-0">
+                <div>
+                  <p className="font-medium">{item.reference}</p>
+                  <p className="text-xs text-[#5c687b]">{new Date(item.submitted_at).toLocaleString()}</p>
+                </div>
+                <div className="text-right">
+                  <p className="text-sm font-medium uppercase tracking-wide text-[#8d6d2d]">{item.status}</p>
+                  <p className="text-sm text-[#5c687b]">{item.total_amount ? `K${Number(item.total_amount / 100).toFixed(2)}` : '—'}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </main>
+  )
 }
-function Metric({ label, value }: { label: string; value: number }) { return <div className="rounded-2xl border border-[#dfdbd1] bg-white p-5"><p className="text-sm text-black/55">{label}</p><p className="mt-3 text-4xl font-semibold">{value}</p></div> }
