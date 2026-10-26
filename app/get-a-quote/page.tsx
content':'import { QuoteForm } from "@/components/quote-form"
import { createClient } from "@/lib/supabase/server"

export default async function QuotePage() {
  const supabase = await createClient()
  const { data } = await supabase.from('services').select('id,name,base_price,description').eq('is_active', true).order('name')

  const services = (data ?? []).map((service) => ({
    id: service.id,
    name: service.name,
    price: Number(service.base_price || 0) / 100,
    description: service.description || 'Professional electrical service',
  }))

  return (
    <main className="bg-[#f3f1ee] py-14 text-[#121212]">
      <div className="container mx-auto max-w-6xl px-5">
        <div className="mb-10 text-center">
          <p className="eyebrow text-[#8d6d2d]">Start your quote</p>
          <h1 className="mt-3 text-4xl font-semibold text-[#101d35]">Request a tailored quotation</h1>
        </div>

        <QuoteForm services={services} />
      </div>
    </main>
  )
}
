@@ -1,0 +1,74 @@
+import { redirect } from 'next/navigation'
+import { createClient } from '@/lib/supabase/server'
+
+export default async function ServiceDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) redirect('/admin/login')
+
+  const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).maybeSingle()
+  if (profile?.role !== 'admin') redirect('/admin')
+
+  const { data: service } = await supabase.from('services').select('*').eq('id', id).single()
+
+  return (
+    <main className="min-h-screen bg-[#f5f3ee] px-5 py-8 text-[#171714]">
+      <div className="mx-auto max-w-4xl">
+        <div className="mb-6 flex items-center justify-between">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.3em] text-[#8d6d2d]">Admin</p>
+            <h1 className="mt-2 text-3xl font-bold">Edit service</h1>
+          </div>
+          <a href="/admin/services" className="text-sm font-semibold text-[#8d6d2d]">← Back to services</a>
+        </div>
+
+        <section className="rounded-3xl border border-[#d9d4ca] bg-white p-6 shadow-sm">
+          <form action={`/api/admin/services/${id}`} method="POST" className="grid gap-5 md:grid-cols-2">
+            <div className="md:col-span-2">
+              <label className="mb-2 block text-sm font-medium">Service name</label>
+              <input defaultValue={service?.name ?? ''} name="name" className="w-full rounded-xl border border-[#d7d2ca] bg-[#f9f8f5] px-4 py-3 outline-none" required />
+            </div>
+            <div className="md:col-span-2">
+              <label className="mb-2 block text-sm font-medium">Slug</label>
+              <input defaultValue={service?.slug ?? ''} name="slug" className="w-full rounded-xl border border-[#d7d2ca] bg-[#f9f8f5] px-4 py-3 outline-none" required />
+            </div>
+            <div className="md:col-span-2">
+              <label className="mb-2 block text-sm font-medium">Description</label>
+              <textarea defaultValue={service?.description ?? ''} name="description" rows={4} className="w-full rounded-xl border border-[#d7d2ca] bg-[#f9f8f5] px-4 py-3 outline-none" />
+            </div>
+            <div>
+              <label className="mb-2 block text-sm font-medium">Category</label>
+              <input defaultValue={service?.category ?? ''} name="category" className="w-full rounded-xl border border-[#d7d2ca] bg-[#f9f8f5] px-4 py-3 outline-none" />
+            </div>
+            <div>
+              <label className="mb-2 block text-sm font-medium">Pricing type</label>
+              <select defaultValue={service?.pricing_type ?? 'fixed'} name="pricing_type" className="w-full rounded-xl border border-[#d7d2ca] bg-[#f9f8f5] px-4 py-3 outline-none">
+                <option value="fixed">Fixed</option>
+                <option value="per_unit">Per unit</option>
+                <option value="hourly">Hourly</option>
+                <option value="daily">Daily</option>
+                <option value="tiered">Tiered</option>
+                <option value="custom">Custom</option>
+              </select>
+            </div>
+            <div>
+              <label className="mb-2 block text-sm font-medium">Base price</label>
+              <input defaultValue={service?.base_price ?? 0} name="base_price" type="number" step="1" className="w-full rounded-xl border border-[#d7d2ca] bg-[#f9f8f5] px-4 py-3 outline-none" />
+            </div>
+            <div>
+              <label className="mb-2 block text-sm font-medium">Unit name</label>
+              <input defaultValue={service?.unit_name ?? ''} name="unit_name" className="w-full rounded-xl border border-[#d7d2ca] bg-[#f9f8f5] px-4 py-3 outline-none" />
+            </div>
+            <div className="md:col-span-2 flex items-center gap-4">
+              <label className="flex items-center gap-2 text-sm font-medium"><input type="checkbox" name="is_active" defaultChecked={service?.is_active ?? true} /> Active</label>
+            </div>
+            <div className="md:col-span-2 flex justify-end">
+              <button type="submit" className="rounded-xl bg-[#101d35] px-5 py-3 font-semibold text-white">Update service</button>
+            </div>
+          </form>
+        </section>
+      </div>
+    </main>
+  )
+}

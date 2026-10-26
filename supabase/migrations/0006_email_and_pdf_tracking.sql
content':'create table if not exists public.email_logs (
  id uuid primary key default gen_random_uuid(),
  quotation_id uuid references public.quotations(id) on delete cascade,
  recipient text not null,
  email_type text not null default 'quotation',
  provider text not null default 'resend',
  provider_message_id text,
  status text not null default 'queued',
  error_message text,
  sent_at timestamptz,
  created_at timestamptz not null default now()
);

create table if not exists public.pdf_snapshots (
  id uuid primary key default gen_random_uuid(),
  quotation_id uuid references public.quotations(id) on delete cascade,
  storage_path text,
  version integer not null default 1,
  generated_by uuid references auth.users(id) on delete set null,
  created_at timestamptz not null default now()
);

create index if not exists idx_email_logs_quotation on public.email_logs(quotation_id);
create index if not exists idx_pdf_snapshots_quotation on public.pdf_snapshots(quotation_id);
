@@ -1,0 +1,30 @@
+supabase/migrations/0005_quotation_lifecycle.sql
+content':'create table if not exists public.quotation_events (
+  id uuid primary key default gen_random_uuid(),
+  quotation_id uuid references public.quotations(id) on delete cascade,
+  event_type text not null,
+  payload jsonb not null default '{}'::jsonb,
+  created_at timestamptz not null default now()
+);
+
+create table if not exists public.quote_versions (
+  id uuid primary key default gen_random_uuid(),
+  quotation_id uuid references public.quotations(id) on delete cascade,
+  version_number integer not null default 1,
+  snapshot jsonb not null default '{}'::jsonb,
+  created_at timestamptz not null default now()
+);
+
+create table if not exists public.audit_logs (
+  id uuid primary key default gen_random_uuid(),
+  actor_id uuid references auth.users(id) on delete set null,
+  action text not null,
+  entity_type text not null,
+  entity_id uuid,
+  metadata jsonb not null default '{}'::jsonb,
+  created_at timestamptz not null default now()
+);
+
+create index if not exists idx_quotation_events_qid on public.quotation_events(quotation_id);
+create index if not exists idx_quote_versions_qid on public.quote_versions(quotation_id);
+create index if not exists idx_audit_logs_actor on public.audit_logs(actor_id);

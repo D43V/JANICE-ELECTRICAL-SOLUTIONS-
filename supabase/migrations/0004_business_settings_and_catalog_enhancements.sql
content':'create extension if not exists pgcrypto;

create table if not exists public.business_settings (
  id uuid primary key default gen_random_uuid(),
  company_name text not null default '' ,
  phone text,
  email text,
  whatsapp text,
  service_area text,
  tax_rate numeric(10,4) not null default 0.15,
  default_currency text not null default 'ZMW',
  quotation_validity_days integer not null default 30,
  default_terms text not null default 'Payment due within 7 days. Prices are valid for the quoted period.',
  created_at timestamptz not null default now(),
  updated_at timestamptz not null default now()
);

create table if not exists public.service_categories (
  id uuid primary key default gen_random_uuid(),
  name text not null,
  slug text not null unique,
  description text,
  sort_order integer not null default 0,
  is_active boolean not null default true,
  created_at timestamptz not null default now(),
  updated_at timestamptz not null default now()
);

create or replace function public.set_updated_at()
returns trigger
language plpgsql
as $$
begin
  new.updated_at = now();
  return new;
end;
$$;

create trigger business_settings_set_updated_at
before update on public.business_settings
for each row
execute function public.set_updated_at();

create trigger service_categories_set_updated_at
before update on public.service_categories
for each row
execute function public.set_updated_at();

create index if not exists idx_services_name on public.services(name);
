@@ -1,0 +1,33 @@
+app/api/admin/settings/route.ts
+content':'import { NextResponse } from "next/server"
+import { createClient } from "@/lib/supabase/server"
+
+export async function POST(request: Request) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return NextResponse.json({ error: "Authentication required" }, { status: 401 })
+
+  const { data: profile } = await supabase.from("profiles").select("role").eq("id", user.id).maybeSingle()
+  if (profile?.role !== "admin") return NextResponse.json({ error: "Administrator access required" }, { status: 403 })
+
+  const formData = await request.formData()
+  const payload = {
+    company_name: String(formData.get("company_name") ?? "JANICE ELECTRICAL SOLUTIONS"),
+    phone: String(formData.get("phone") ?? ""),
+    email: String(formData.get("email") ?? ""),
+    whatsapp: String(formData.get("whatsapp") ?? ""),
+    default_currency: String(formData.get("default_currency") ?? "ZMW"),
+    tax_rate: Number(formData.get("tax_rate") ?? 0.15),
+    quotation_validity_days: Number(formData.get("quotation_validity_days") ?? 30),
+    service_area: String(formData.get("service_area") ?? ""),
+    default_terms: String(formData.get("default_terms") ?? ""),
+  }
+
+  const { error } = await supabase.from("business_settings").upsert({
+    id: "00000000-0000-0000-0000-000000000001",
+    ...payload,
+  })
+
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  return NextResponse.redirect(new URL("/admin/settings", process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"))
+}
