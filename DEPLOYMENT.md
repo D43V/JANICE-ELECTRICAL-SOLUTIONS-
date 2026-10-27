@@ -57,14 +57,24 @@ Replace the UUID with the actual authenticated user ID and the email with the re
 
 A reusable template is available in `supabase/templates/admin-bootstrap.sql`.
 
-## 4. Email and PDF requirements
+## 4. Vercel deployment
+
+1. Import the GitHub repository into Vercel.
+2. Select the project and confirm the framework is detected as Next.js.
+3. Add the environment variables from `.env.example` in the Vercel dashboard.
+4. Set the production domain in `NEXT_PUBLIC_SITE_URL`.
+5. Configure the Supabase redirect URL for `/auth/callback`.
+6. Ensure the project is using Node 20.
+7. Trigger a production deployment and verify your site loads.
+
+## 5. Email and PDF requirements
 
 - Configure a verified Resend domain.
 - Set `EMAIL_FROM` to the exact verified sender address.
 - Keep PDFs in a private storage bucket.
 - Only generate signed URLs after admin authorization checks.
 
-## 5. Production checklist
+## 6. Production checklist
 
 - Deploy to Vercel or your preferred hosting provider.
 - Set all environment variables in the hosting platform.
@@ -74,7 +84,7 @@ A reusable template is available in `supabase/templates/admin-bootstrap.sql`.
 - Verify email delivery and PDF attachment generation.
 - Confirm database backups and recovery procedures exist.
 
-## 6. Do not do this in production
+## 7. Do not do this in production
 
 - Do not insert sample customer data into the live database.
 - Do not leave admin access enabled for a non-authorized account.

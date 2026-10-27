@@ -68,12 +68,11 @@ Copy these from `.env.example` into `.env.local` and provide real values.
 2. Apply the SQL migrations in `supabase/migrations/`.
 3. Create a first user in Supabase Auth.
 4. Insert a matching record in `public.profiles` with the role `admin`.
-5. Configure the project site URL and redirect URLs for `/auth/callback`.
+5. Configure the project site URL and redirect settings for `/auth/callback`.
 
 Example SQL for the admin profile:
 
 ```sql
--- Replace the UUID below with the authenticated user's ID in Supabase Auth
 INSERT INTO public.profiles (id, email, full_name, phone, role, is_admin)
 VALUES (
   '00000000-0000-0000-0000-000000000000',
@@ -92,6 +91,18 @@ SET email = EXCLUDED.email,
 ```
 
 See `supabase/templates/admin-bootstrap.sql` for a reusable template.
+
+## Vercel deployment setup
+
+This project is compatible with Vercel deployment.
+
+1. Import the GitHub repository into Vercel.
+2. Set the framework to Next.js automatically detected by Vercel.
+3. Add the environment variables from `.env.example` in the Vercel dashboard.
+4. Set `NEXT_PUBLIC_SITE_URL` to the production domain used by Vercel.
+5. Add the Supabase redirect URL for `/auth/callback` in your Supabase project settings.
+6. Set the Vercel build to use Node 20 by using `.nvmrc` or the project settings.
+7. Trigger a production deploy and verify `/api/health`, `/admin/login`, and the quote form.
 
 ## Running migrations
 
