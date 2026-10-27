@@ -18,7 +18,9 @@ const emptyForm: FormState = {
 function validateForm(form: FormState) {
   if (!form.fullName.trim()) return 'Please enter your name.'
   if (!form.email.trim()) return 'Please enter your email address.'
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim())) return 'Please enter a valid email address.'
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim())) {
+    return 'Please enter a valid email address.'
+  }
   if (!form.phone.trim()) return 'Please enter your phone number.'
   return ''
 }
@@ -154,7 +156,11 @@ export function QuoteForm({ services }: { services: Service[] }) {
                     onClick={() => toggle(service.id)}
                     className={`flex flex-1 items-start gap-3 text-left ${selectedService ? 'text-[#171714]' : 'text-[#4b4a45]'}`}
                   >
-                    <span className={`mt-0.5 flex size-5 items-center justify-center rounded border ${selectedService ? 'border-[#111827] bg-[#111827] text-white' : 'border-[#b7b2a8] bg-white'}`}>
+                    <span
+                      className={`mt-0.5 flex size-5 items-center justify-center rounded border ${
+                        selectedService ? 'border-[#111827] bg-[#111827] text-white' : 'border-[#b7b2a8] bg-white'
+                      }`}
+                    >
                       {selectedService ? <Check className="size-3" /> : null}
                     </span>
                     <span>
@@ -172,11 +178,21 @@ export function QuoteForm({ services }: { services: Service[] }) {
                   <div className="mt-4 flex items-center justify-between rounded-xl bg-[#f5f3ee] px-3 py-2">
                     <span className="text-sm font-medium text-[#171714]">Quantity</span>
                     <div className="flex items-center gap-3">
-                      <button type="button" onClick={() => changeQty(service.id, -1)} className="rounded-full border border-[#d4cec5] bg-white p-2 text-[#171714]" aria-label={`Decrease quantity for ${service.name}`}>
+                      <button
+                        type="button"
+                        onClick={() => changeQty(service.id, -1)}
+                        className="rounded-full border border-[#d4cec5] bg-white p-2 text-[#171714]"
+                        aria-label={`Decrease quantity for ${service.name}`}
+                      >
                         <Minus className="size-4" />
                       </button>
                       <span className="min-w-6 text-center text-sm font-semibold text-[#171714]">{quantity}</span>
-                      <button type="button" onClick={() => changeQty(service.id, 1)} className="rounded-full border border-[#d4cec5] bg-white p-2 text-[#171714]" aria-label={`Increase quantity for ${service.name}`}>
+                      <button
+                        type="button"
+                        onClick={() => changeQty(service.id, 1)}
+                        className="rounded-full border border-[#d4cec5] bg-white p-2 text-[#171714]"
+                        aria-label={`Increase quantity for ${service.name}`}
+                      >
                         <Plus className="size-4" />
                       </button>
                     </div>
@@ -242,7 +258,9 @@ export function QuoteForm({ services }: { services: Service[] }) {
         </div>
 
         {status.kind === 'error' ? (
-          <p className="rounded-xl border border-[#f4d2d2] bg-[#fff4f4] px-4 py-3 text-sm text-[#8b1d1d]">{status.message}</p>
+          <p className="rounded-xl border border-[#f4d2d2] bg-[#fff4f4] px-4 py-3 text-sm text-[#8b1d1d]">
+            {status.message}
+          </p>
         ) : null}
       </div>
 
@@ -252,22 +270,20 @@ export function QuoteForm({ services }: { services: Service[] }) {
           {selected.length === 0 ? (
             <p className="text-sm text-[#d3d0cb]">No services selected yet.</p>
           ) : (
-            <>
-              {selected.map((serviceId) => {
-                const service = services.find((item) => item.id === serviceId)
-                if (!service) return null
-                const quantity = qty[serviceId] ?? 1
-                return (
-                  <div key={serviceId} className="flex items-center justify-between gap-4 border-b border-white/10 pb-3">
-                    <div>
-                      <p className="font-medium">{service.name}</p>
-                      <p className="text-xs text-[#c7c2bb]">Qty {quantity}</p>
-                    </div>
-                    <p className="font-medium">K {(service.price * quantity).toFixed(2)}</p>
+            selected.map((serviceId) => {
+              const service = services.find((item) => item.id === serviceId)
+              if (!service) return null
+              const quantity = qty[serviceId] ?? 1
+              return (
+                <div key={serviceId} className="flex items-center justify-between gap-4 border-b border-white/10 pb-3">
+                  <div>
+                    <p className="font-medium">{service.name}</p>
+                    <p className="text-xs text-[#c7c2bb]">Qty {quantity}</p>
                   </div>
-                )
-              })}
-            </>
+                  <p className="font-medium">K {(service.price * quantity).toFixed(2)}</p>
+                </div>
+              )
+            })
           )}
         </div>
 

@@ -1,12 +1,13 @@
+import { createHash } from 'node:crypto'
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
-import { createHash } from 'node:crypto'
-import { createAdminClient } from '@/lib/supabase/admin'
 import { calculateQuote } from '@/lib/pricing'
+import { createAdminClient } from '@/lib/supabase/admin'
 
-const quoteRateLimitWindowMs = 60_000
-const quoteRateLimitMaxRequests = 15
-const quoteRequestStore = new Map<string, { expiresAt: number; reference?: string }>()
+const rateLimitWindowMs = 60_000
+const rateLimitMaxRequests = 15
+const rateLimitMap = new Map<string, { count: number; resetAt: number }>()
+const idempotencyMap = new Map<string, { expiresAt: number; reference?: string }>()
 
 const schema = z.object({
   customer: z.object({
@@ -17,59 +18,65 @@ const schema = z.object({
   serviceLocation: z.string().trim().max(300).optional(),
   customerNotes: z.string().trim().max(2000).optional(),
   idempotencyKey: z.string().trim().min(6).max(128).optional(),
-  items: z.array(z.object({
-    serviceId: z.string().min(1).max(120),
-    quantity: z.number().int().positive().max(1000),
-    options: z.array(z.unknown()).default([]),
-  })).min(1).max(20),
+  items: z
+    .array(
+      z.object({
+        serviceId: z.string().min(1).max(120),
+        quantity: z.number().int().positive().max(1000),
+        options: z.array(z.unknown()).default([]),
+      }),
+    )
+    .min(1)
+    .max(20),
 })
 
 function getClientIp(request: Request) {
   const forwarded = request.headers.get('x-forwarded-for')
-  const ip = forwarded?.split(',')[0]?.trim() || request.headers.get('x-real-ip') || 'unknown'
-  return ip
+  return forwarded?.split(',')[0]?.trim() || request.headers.get('x-real-ip') || 'unknown'
 }
 
-function enforceQuoteRateLimit(clientIp: string) {
+function enforceRateLimit(clientIp: string) {
   const now = Date.now()
-  const entries = quoteRateLimitStore.get(clientIp) ?? { expiresAt: now + quoteRateLimitWindowMs, reference: undefined }
+  const bucket = rateLimitMap.get(clientIp)
 
-  if (entries.expiresAt <= now) {
-    quoteRateLimitStore.delete(clientIp)
-    quoteRateLimitStore.set(clientIp, { expiresAt: now + quoteRateLimitWindowMs })
+  if (!bucket || bucket.resetAt <= now) {
+    rateLimitMap.set(clientIp, { count: 1, resetAt: now + rateLimitWindowMs })
     return false
   }
 
-  const key = `${clientIp}:${Math.floor(now / quoteRateLimitWindowMs)}`
-  const bucket = quoteRateLimitStore.get(key)
-  if (!bucket) {
-    quoteRateLimitStore.set(key, { expiresAt: now + quoteRateLimitWindowMs })
-    return false
-  }
-
-  const requestCount = Number(bucket.reference ?? 0)
-  if (requestCount >= quoteRateLimitMaxRequests) {
+  if (bucket.count >= rateLimitMaxRequests) {
     return true
   }
 
-  bucket.reference = String(requestCount + 1)
+  bucket.count += 1
   return false
 }
 
+function createRequestFallbackKey(payload: z.infer<typeof schema>) {
+  return createHash('sha256')
+    .update(
+      JSON.stringify({
+        customer: payload.customer,
+        serviceLocation: payload.serviceLocation,
+        customerNotes: payload.customerNotes,
+        items: payload.items,
+      }),
+    )
+    .digest('hex')
+}
+
 function getIdempotencyKey(payload: z.infer<typeof schema>) {
-  return payload.idempotencyKey || createHash('sha256').update(JSON.stringify({
-    customer: payload.customer,
-    items: payload.items,
-    serviceLocation: payload.serviceLocation,
-    customerNotes: payload.customerNotes,
-  })).digest('hex')
+  return payload.idempotencyKey?.trim() || createRequestFallbackKey(payload)
 }
 
 export async function POST(request: Request) {
   try {
     const clientIp = getClientIp(request)
-    if (enforceQuoteRateLimit(clientIp)) {
-      return NextResponse.json({ error: 'Too many quotation requests. Please try again shortly.' }, { status: 429 })
+    if (enforceRateLimit(clientIp)) {
+      return NextResponse.json(
+        { error: 'Too many quotation requests. Please try again shortly.' },
+        { status: 429 },
+      )
     }
 
     const body = await request.json().catch(() => null)
@@ -79,13 +86,13 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Please check the form details.' }, { status: 400 })
     }
 
-    const idempotencyKey = getIdempotencyKey(parsed.data)
-    const existing = quoteRequestStore.get(idempotencyKey)
-    if (existing && existing.reference && existing.expiresAt > Date.now()) {
+    const key = getIdempotencyKey(parsed.data)
+    const existing = idempotencyMap.get(key)
+    if (existing && existing.expiresAt > Date.now() && existing.reference) {
       return NextResponse.json({ reference: existing.reference, total: 0, duplicate: true })
     }
 
-    quoteRequestStore.set(idempotencyKey, { expiresAt: Date.now() + 10 * 60_000 })
+    idempotencyMap.set(key, { expiresAt: Date.now() + 10 * 60_000 })
 
     const supabase = createAdminClient()
     const ids = parsed.data.items.map((item) => item.serviceId)
@@ -127,11 +134,15 @@ export async function POST(request: Request) {
 
     const { data: customer, error: customerError } = existingCustomer
       ? { data: existingCustomer, error: null }
-      : await supabase.from('customers').insert({
-          full_name: parsed.data.customer.fullName,
-          email: parsed.data.customer.email,
-          phone: parsed.data.customer.phone,
-        }).select('id').single()
+      : await supabase
+          .from('customers')
+          .insert({
+            full_name: parsed.data.customer.fullName,
+            email: parsed.data.customer.email,
+            phone: parsed.data.customer.phone,
+          })
+          .select('id')
+          .single()
 
     if (customerError || !customer) {
       throw customerError ?? new Error('Customer could not be saved')
@@ -142,17 +153,21 @@ export async function POST(request: Request) {
       throw referenceError ?? new Error('Reference could not be generated')
     }
 
-    const { data: quotation, error: quotationError } = await supabase.from('quotations').insert({
-      reference,
-      customer_id: customer.id,
-      currency: 'ZMW',
-      subtotal: totals.subtotal,
-      total_amount: totals.total,
-      tax_amount: totals.tax,
-      status: 'new',
-      service_location: parsed.data.serviceLocation ?? null,
-      customer_notes: parsed.data.customerNotes ?? null,
-    }).select('id,reference,total_amount').single()
+    const { data: quotation, error: quotationError } = await supabase
+      .from('quotations')
+      .insert({
+        reference,
+        customer_id: customer.id,
+        currency: 'ZMW',
+        subtotal: totals.subtotal,
+        total_amount: totals.total,
+        tax_amount: totals.tax,
+        status: 'new',
+        service_location: parsed.data.serviceLocation ?? null,
+        customer_notes: parsed.data.customerNotes ?? null,
+      })
+      .select('id,reference,total_amount')
+      .single()
 
     if (quotationError || !quotation) {
       throw quotationError ?? new Error('Quotation could not be saved')
@@ -179,13 +194,19 @@ export async function POST(request: Request) {
       throw itemsError
     }
 
-    quoteRequestStore.set(idempotencyKey, { expiresAt: Date.now() + 10 * 60_000, reference: quotation.reference })
+    idempotencyMap.set(key, {
+      expiresAt: Date.now() + 10 * 60_000,
+      reference: quotation.reference,
+    })
 
     return NextResponse.json({ reference: quotation.reference, total: quotation.total_amount })
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unknown error'
     console.error('quotation submission failed', { message })
-    return NextResponse.json({ error: 'We could not save your request. Please try again.' }, { status: 500 })
+    return NextResponse.json(
+      { error: 'We could not save your request. Please try again.' },
+      { status: 500 },
+    )
   }
 }
 
