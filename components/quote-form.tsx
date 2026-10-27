@@ -1,17 +1,192 @@
-'use client'
-import { useMemo, useState } from 'react'
-import { Check, Minus, Plus } from 'lucide-react'
+import { NextResponse } from 'next/server'
+import { z } from 'zod'
+import { createHash } from 'node:crypto'
+import { createAdminClient } from '@/lib/supabase/admin'
+import { calculateQuote } from '@/lib/pricing'
 
-type Service = { id: string; name: string; price: number; description: string }
-export function QuoteForm({ services }: { services: Service[] }) {
-  const [selected, setSelected] = useState<string[]>([])
-  const [qty, setQty] = useState<Record<string, number>>({})
-  const [form, setForm] = useState({ fullName: '', email: '', phone: '', location: '', notes: '' })
-  const [status, setStatus] = useState<{ kind: 'idle' | 'loading' | 'error' | 'success'; message?: string }>({ kind: 'idle' })
-  const total = useMemo(() => services.filter((service) => selected.includes(service.id)).reduce((sum, service) => sum + service.price * (qty[service.id] ?? 1), 0), [services, selected, qty])
-  function toggle(id: string) { setSelected((current) => current.includes(id) ? current.filter((value) => value !== id) : [...current, id]) }
-  function changeQty(id: string, delta: number) { setQty((current) => ({ ...current, [id]: Math.max(1, (current[id] ?? 1) + delta) })) }
-  async function submit(event: React.FormEvent<HTMLFormElement>) { event.preventDefault(); if (!selected.length) return setStatus({ kind: 'error', message: 'Select at least one service.' }); setStatus({ kind: 'loading' }); const response = await fetch('/api/quotations', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ customer: { fullName: form.fullName, email: form.email, phone: form.phone }, serviceLocation: form.location, customerNotes: form.notes, items: selected.map((id) => ({ serviceId: id, quantity: qty[id] ?? 1, options: [] })) }) }); const result = await response.json(); setStatus(response.ok ? { kind: 'success', message: result.reference } : { kind: 'error', message: result.error }) }
-  if (status.kind === 'success') return <div className="mx-auto max-w-xl rounded-lg border border-[#dedbd3] bg-white p-8 text-center"><div className="mx-auto flex size-14 items-center justify-center rounded-full bg-[#e8f0e5] text-[#35602f]"><Check /></div><h2 className="mt-5 text-2xl font-semibold">Request received</h2><p className="mt-3 text-sm leading-6 text-[#6e6c67]">Your request has been saved for review. We will contact you about the next step.</p><p className="mt-6 font-semibold">Reference: {status.message}</p></div>
-  return <form className="grid gap-10 lg:grid-cols-[1fr_360px]" onSubmit={submit}><div className="flex flex-col gap-8"><div><p className="eyebrow mb-3">01 — Services</p><h2 className="text-2xl font-semibold">What can we help with?</h2><div className="mt-5 flex flex-col gap-3">{services.length ? services.map((service) => { const active = selected.includes(service.id); return <div key={service.id} className={`flex min-h-[76px] items-center justify-between rounded border p-5 ${active ? 'border-[#c9a24d] bg-[#fbf6e8]' : 'border-[#dedbd3] bg-white'}`}><button type="button" onClick={() => toggle(service.id)} className="flex min-h-11 flex-1 items-center text-left"><span><span className="block font-semibold">{service.name}</span><span className="mt-1 block text-sm text-[#6e6c67]">From K{service.price.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span></span></button>{active && <div className="flex items-center gap-2"><button type="button" aria-label={`Decrease ${service.name} quantity`} onClick={() => changeQty(service.id, -1)} className="flex size-10 items-center justify-center rounded-full border"><Minus /></button><span className="w-5 text-center">{qty[service.id] ?? 1}</span><button type="button" aria-label={`Increase ${service.name} quantity`} onClick={() => changeQty(service.id, 1)} className="flex size-10 items-center justify-center rounded-full border"><Plus /></button></div>}</div> }) : <p className="rounded border border-dashed p-5 text-sm text-[#6e6c67]">No active services are available yet.</p>}</div></div><div><p className="eyebrow mb-3">02 — Details</p><div className="grid gap-4"><input required placeholder="Full name" value={form.fullName} onChange={(e) => setForm({ ...form, fullName: e.target.value })} className="min-h-12 rounded border border-[#dedbd3] px-4 text-base" /><input required type="email" placeholder="Email address" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} className="min-h-12 rounded border border-[#dedbd3] px-4 text-base" /><input required placeholder="Telephone number" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} className="min-h-12 rounded border border-[#dedbd3] px-4 text-base" /><input placeholder="Service location" value={form.location} onChange={(e) => setForm({ ...form, location: e.target.value })} className="min-h-12 rounded border border-[#dedbd3] px-4 text-base" /><textarea placeholder="Special instructions" value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} className="min-h-28 rounded border border-[#dedbd3] px-4 py-3 text-base" />{status.kind === 'error' && <p className="text-sm text-red-700">{status.message}</p>}</div></div></div><aside className="h-fit rounded-lg bg-[#10100f] p-6 text-white"><p className="eyebrow text-[#c9a24d]">03 — Estimate</p><h2 className="mt-3 text-2xl font-semibold">K{total.toLocaleString(undefined, { minimumFractionDigits: 2 })}</h2><p className="mt-3 text-sm leading-6 text-white/60">Calculated from the current catalogue. Final prices are confirmed by JA.</p><button disabled={status.kind === 'loading' || !services.length} className="mt-8 flex min-h-12 w-full items-center justify-center rounded-full bg-[#c9a24d] font-semibold text-[#10100f] disabled:opacity-50">{status.kind === 'loading' ? 'Saving request…' : 'Submit request'}</button></aside></form>
+const quoteRateLimitWindowMs = 60_000
+const quoteRateLimitMaxRequests = 15
+const quoteRequestStore = new Map<string, { expiresAt: number; reference?: string }>()
+
+const schema = z.object({
+  customer: z.object({
+    fullName: z.string().trim().min(2).max(120),
+    email: z.string().trim().email().max(254),
+    phone: z.string().trim().min(7).max(40),
+  }),
+  serviceLocation: z.string().trim().max(300).optional(),
+  customerNotes: z.string().trim().max(2000).optional(),
+  idempotencyKey: z.string().trim().min(6).max(128).optional(),
+  items: z.array(z.object({
+    serviceId: z.string().min(1).max(120),
+    quantity: z.number().int().positive().max(1000),
+    options: z.array(z.unknown()).default([]),
+  })).min(1).max(20),
+})
+
+function getClientIp(request: Request) {
+  const forwarded = request.headers.get('x-forwarded-for')
+  const ip = forwarded?.split(',')[0]?.trim() || request.headers.get('x-real-ip') || 'unknown'
+  return ip
 }
+
+function enforceQuoteRateLimit(clientIp: string) {
+  const now = Date.now()
+  const entries = quoteRateLimitStore.get(clientIp) ?? { expiresAt: now + quoteRateLimitWindowMs, reference: undefined }
+
+  if (entries.expiresAt <= now) {
+    quoteRateLimitStore.delete(clientIp)
+    quoteRateLimitStore.set(clientIp, { expiresAt: now + quoteRateLimitWindowMs })
+    return false
+  }
+
+  const key = `${clientIp}:${Math.floor(now / quoteRateLimitWindowMs)}`
+  const bucket = quoteRateLimitStore.get(key)
+  if (!bucket) {
+    quoteRateLimitStore.set(key, { expiresAt: now + quoteRateLimitWindowMs })
+    return false
+  }
+
+  const requestCount = Number(bucket.reference ?? 0)
+  if (requestCount >= quoteRateLimitMaxRequests) {
+    return true
+  }
+
+  bucket.reference = String(requestCount + 1)
+  return false
+}
+
+function getIdempotencyKey(payload: z.infer<typeof schema>) {
+  return payload.idempotencyKey || createHash('sha256').update(JSON.stringify({
+    customer: payload.customer,
+    items: payload.items,
+    serviceLocation: payload.serviceLocation,
+    customerNotes: payload.customerNotes,
+  })).digest('hex')
+}
+
+export async function POST(request: Request) {
+  try {
+    const clientIp = getClientIp(request)
+    if (enforceQuoteRateLimit(clientIp)) {
+      return NextResponse.json({ error: 'Too many quotation requests. Please try again shortly.' }, { status: 429 })
+    }
+
+    const body = await request.json().catch(() => null)
+    const parsed = schema.safeParse(body)
+
+    if (!parsed.success) {
+      return NextResponse.json({ error: 'Please check the form details.' }, { status: 400 })
+    }
+
+    const idempotencyKey = getIdempotencyKey(parsed.data)
+    const existing = quoteRequestStore.get(idempotencyKey)
+    if (existing && existing.reference && existing.expiresAt > Date.now()) {
+      return NextResponse.json({ reference: existing.reference, total: 0, duplicate: true })
+    }
+
+    quoteRequestStore.set(idempotencyKey, { expiresAt: Date.now() + 10 * 60_000 })
+
+    const supabase = createAdminClient()
+    const ids = parsed.data.items.map((item) => item.serviceId)
+
+    const { data: services, error: servicesError } = await supabase
+      .from('services')
+      .select('id,slug,name,description,pricing_type,base_price,unit_name,options')
+      .in('slug', ids)
+      .eq('is_active', true)
+
+    if (servicesError) {
+      throw servicesError
+    }
+
+    if (!services || services.length !== new Set(ids).size) {
+      return NextResponse.json({ error: 'One or more selected services are no longer available.' }, { status: 400 })
+    }
+
+    const serviceMap = new Map(services.map((service) => [service.slug, service]))
+    const lines = parsed.data.items.map((item) => {
+      const service = serviceMap.get(item.serviceId)
+      if (!service) {
+        throw new Error(`Service ${item.serviceId} is no longer available.`)
+      }
+
+      return {
+        quantity: item.quantity,
+        unitPriceMinor: Number(service.base_price),
+      }
+    })
+
+    const totals = calculateQuote(lines)
+
+    const { data: existingCustomer } = await supabase
+      .from('customers')
+      .select('id')
+      .eq('email', parsed.data.customer.email)
+      .maybeSingle()
+
+    const { data: customer, error: customerError } = existingCustomer
+      ? { data: existingCustomer, error: null }
+      : await supabase.from('customers').insert({
+          full_name: parsed.data.customer.fullName,
+          email: parsed.data.customer.email,
+          phone: parsed.data.customer.phone,
+        }).select('id').single()
+
+    if (customerError || !customer) {
+      throw customerError ?? new Error('Customer could not be saved')
+    }
+
+    const { data: reference, error: referenceError } = await supabase.rpc('next_quotation_reference')
+    if (referenceError || !reference) {
+      throw referenceError ?? new Error('Reference could not be generated')
+    }
+
+    const { data: quotation, error: quotationError } = await supabase.from('quotations').insert({
+      reference,
+      customer_id: customer.id,
+      currency: 'ZMW',
+      subtotal: totals.subtotal,
+      total_amount: totals.total,
+      tax_amount: totals.tax,
+      status: 'new',
+      service_location: parsed.data.serviceLocation ?? null,
+      customer_notes: parsed.data.customerNotes ?? null,
+    }).select('id,reference,total_amount').single()
+
+    if (quotationError || !quotation) {
+      throw quotationError ?? new Error('Quotation could not be saved')
+    }
+
+    const items = parsed.data.items.map((item) => {
+      const service = serviceMap.get(item.serviceId)
+      if (!service) {
+        throw new Error(`Service ${item.serviceId} is no longer available.`)
+      }
+
+      return {
+        quotation_id: quotation.id,
+        service_id: service.id,
+        description_snapshot: service.description,
+        quantity: item.quantity,
+        unit_price: Number(service.base_price),
+        line_total: Number(service.base_price) * item.quantity,
+      }
+    })
+
+    const { error: itemsError } = await supabase.from('quotation_items').insert(items)
+    if (itemsError) {
+      throw itemsError
+    }
+
+    quoteRequestStore.set(idempotencyKey, { expiresAt: Date.now() + 10 * 60_000, reference: quotation.reference })
+
+    return NextResponse.json({ reference: quotation.reference, total: quotation.total_amount })
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Unknown error'
+    console.error('quotation submission failed', { message })
+    return NextResponse.json({ error: 'We could not save your request. Please try again.' }, { status: 500 })
+  }
+}
+
+export const dynamic = 'force-dynamic'
