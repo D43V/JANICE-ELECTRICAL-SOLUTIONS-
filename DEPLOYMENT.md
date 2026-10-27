@@ -1,12 +1,81 @@
-# JA deployment checklist
+# Deployment checklist
 
-1. Create or connect a Supabase project and apply `supabase/migrations/0001_initial_schema.sql` through the Supabase SQL editor or MCP.
-2. Create the first administrator in Supabase Auth, then insert a matching row in `public.profiles` with role `admin` using a secure server-side operation.
-3. Configure the variables in `.env.example` in Vercel for Preview and Production.
-4. Configure a verified Resend sending domain and set `EMAIL_FROM` to that domain.
-5. Keep customer PDFs in a private Supabase Storage bucket; issue signed URLs only after an admin authorization check.
-6. Set the production site URL and configure Supabase Auth redirect URLs for `/auth/callback`.
-7. Test customer submission, admin review, PDF generation, email failure logging and retry behavior before launch.
-8. Enable database backups and document restore ownership and frequency.
+Follow these steps before launching the site.
 
-No sample customer records should be inserted in production.
+## 1. Supabase setup
+
+1. Create or connect a Supabase project.
+2. Apply the database migrations in the `supabase/migrations` directory.
+3. Create the first admin user in Supabase Auth.
+4. Insert a matching row in `public.profiles` with `role = 'admin'`.
+5. Configure the app URL and redirect settings for `/auth/callback`.
+
+## 2. Environment configuration
+
+Create a `.env.local` file using `.env.example` and populate values for:
+
+```dotenv
+NEXT_PUBLIC_SUPABASE_URL=
+NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=
+SUPABASE_URL=
+SUPABASE_SECRET_KEY=
+SUPABASE_SERVICE_ROLE_KEY=
+RESEND_API_KEY=
+ADMIN_NOTIFICATION_EMAIL=
+EMAIL_FROM=
+NEXT_PUBLIC_SITE_URL=https://your-domain.com
+```
+
+Notes:
+- `SUPABASE_SERVICE_ROLE_KEY` is optional if `SUPABASE_SECRET_KEY` is already set.
+- `EMAIL_FROM` must use a verified Resend sending domain.
+- `NEXT_PUBLIC_SITE_URL` should be the production domain in deployment.
+
+## 3. Admin bootstrap
+
+After the user exists in Supabase Auth, run the following SQL in the Supabase dashboard:
+
+```sql
+INSERT INTO public.profiles (id, email, full_name, phone, role, is_admin)
+VALUES (
+  '00000000-0000-0000-0000-000000000000',
+  'admin@example.com',
+  'Admin User',
+  '+1234567890',
+  'admin',
+  true
+)
+ON CONFLICT (id) DO UPDATE
+SET email = EXCLUDED.email,
+    full_name = EXCLUDED.full_name,
+    phone = EXCLUDED.phone,
+    role = EXCLUDED.role,
+    is_admin = EXCLUDED.is_admin;
+```
+
+Replace the UUID with the actual authenticated user ID and the email with the real admin address.
+
+A reusable template is available in `supabase/templates/admin-bootstrap.sql`.
+
+## 4. Email and PDF requirements
+
+- Configure a verified Resend domain.
+- Set `EMAIL_FROM` to the exact verified sender address.
+- Keep PDFs in a private storage bucket.
+- Only generate signed URLs after admin authorization checks.
+
+## 5. Production checklist
+
+- Deploy to Vercel or your preferred hosting provider.
+- Set all environment variables in the hosting platform.
+- Confirm login works at `/admin/login`.
+- Test the customer quotation flow.
+- Test admin approval and rejection actions.
+- Verify email delivery and PDF attachment generation.
+- Confirm database backups and recovery procedures exist.
+
+## 6. Do not do this in production
+
+- Do not insert sample customer data into the live database.
+- Do not leave admin access enabled for a non-authorized account.
+- Do not use local development secrets in production.
