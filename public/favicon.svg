@@ -1,0 +1,21 @@
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="navyGradient" x1="60" y1="30" x2="430" y2="460" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#0F1F35"/>
+      <stop offset="1" stop-color="#1B3257"/>
+    </linearGradient>
+    <linearGradient id="goldGradient" x1="120" y1="70" x2="370" y2="380" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#F7D788"/>
+      <stop offset="0.5" stop-color="#E0B450"/>
+      <stop offset="1" stop-color="#C68A2A"/>
+    </linearGradient>
+  </defs>
+
+  <rect x="32" y="32" width="448" height="448" rx="90" fill="url(#navyGradient)"/>
+  <rect x="64" y="64" width="384" height="384" rx="68" stroke="url(#goldGradient)" stroke-width="5" opacity="0.9"/>
+
+  <path d="M252 104V246C252 285.765 219.765 318 180 318H156V364H180C246.274 364 300 310.274 300 244V104H252Z" fill="url(#goldGradient)"/>
+  <path d="M286 150H358L268 320H210L286 150Z" fill="url(#goldGradient)"/>
+  <path d="M172 364L108 460H184L260 364H172Z" fill="url(#goldGradient)" opacity="0.96"/>
+  <path d="M96 364H330" stroke="#F1CD74" stroke-width="12" stroke-linecap="round" opacity="0.8"/>
+</svg>
