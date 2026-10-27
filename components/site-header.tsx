@@ -1,63 +1,49 @@
 import Link from "next/link"
-import { ArrowUpRight, Menu } from "lucide-react"
+import { Menu, ArrowUpRight } from "lucide-react"
 
-const navItems = [
-  { href: "/", label: "Home" },
+const nav = [
   { href: "/about", label: "About" },
   { href: "/services", label: "Services" },
-  { href: "/get-a-quote", label: "Quote" },
+  { href: "/get-a-quote", label: "Get a quote" },
   { href: "/contact", label: "Contact" },
 ]
 
 export function SiteHeader() {
   return (
-    <header className="border-b border-slate-200 bg-[#101D35] text-white shadow-sm">
-      <div className="container mx-auto flex h-[74px] items-center justify-between px-5">
-        <Link href="/" aria-label="JANICE ELECTRICAL SOLUTIONS home" className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#D4AF65] text-sm font-bold text-slate-900">
-            JA
-          </div>
-          <div>
-            <div className="text-sm font-semibold tracking-[0.18em] text-white/90">JANICE</div>
-            <div className="text-[10px] uppercase tracking-[0.22em] text-white/60">Electrical Solutions</div>
-          </div>
+    <header className="border-b border-white/10 bg-[#101D35] text-white">
+      <div className="container flex h-[74px] items-center justify-between gap-5">
+        <Link href="/" aria-label="JANICE Electrical Solutions home" className="flex items-center gap-3 shrink-0">
+          <img
+            src="/janice-logo.svg"
+            alt="JANICE Electrical Solutions"
+            className="h-11 w-auto object-contain"
+          />
         </Link>
 
-        <nav className="hidden items-center gap-7 md:flex">
-          {navItems.map((item) => (
-            <Link
-              key={item.href}
-              href={item.href}
-              className="text-sm font-medium text-white/75 transition hover:text-white"
-            >
+        <nav className="hidden items-center gap-8 text-sm font-medium md:flex">
+          {nav.map((item) => (
+            <Link key={item.href} href={item.href} className="text-white/80 transition hover:text-white">
               {item.label}
             </Link>
           ))}
         </nav>
 
-        <div className="hidden items-center gap-3 md:flex">
-          <Link
-            href="/contact"
-            className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-4 py-2 text-sm font-medium text-white transition hover:bg-white/10"
-          >
-            Book a consultation
-          </Link>
+        <div className="flex items-center gap-3">
           <Link
             href="/get-a-quote"
-            className="inline-flex items-center gap-2 rounded-full bg-[#D4AF65] px-4 py-2 text-sm font-semibold text-slate-900 transition hover:bg-[#e6c984]"
+            className="inline-flex items-center gap-2 rounded-full border border-[#D4AF65] bg-[#D4AF65] px-4 py-2 text-sm font-semibold text-[#101D35] transition hover:brightness-110"
           >
-            Get a quote
-            <ArrowUpRight className="size-4" />
+            Book a call
+            <ArrowUpRight className="h-4 w-4" />
           </Link>
+          <button
+            type="button"
+            aria-label="Open menu"
+            className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-white/10 text-white md:hidden"
+          >
+            <Menu className="h-5 w-5" />
+          </button>
         </div>
-
-        <button
-          type="button"
-          aria-label="Open menu"
-          className="inline-flex items-center justify-center rounded-full border border-white/10 bg-white/5 p-2 text-white md:hidden"
-        >
-          <Menu className="size-5" />
-        </button>
       </div>
     </header>
   )
