@@ -5,13 +5,13 @@ import { createClient } from '@/lib/supabase/server'
 type Service = { name: string; description: string; category: string; image_path?: string | null }
 
 const imageByCategory: Record<string, string> = {
-  'Design & Planning': '/images/ja/IMG_5913.JPG',
-  'Project Support': '/images/ja/IMG_5913.JPG',
-  'Power & Compliance': '/images/ja/IMG_5914.JPG',
-  'Solar & Energy': '/images/ja/IMG_5877.JPG',
-  'Power Systems': '/images/ja/IMG_5877.JPG',
-  Installation: '/images/ja/IMG_5911.JPG',
-  'Protection & Security': '/images/ja/IMG_5868.JPG',
+  'Design & Planning': '/images/services/electrical-installation.png',
+  'Project Support': '/images/services/electrical-installation.png',
+  'Power & Compliance': '/images/services/electrical-installation.png',
+  'Solar & Energy': '/images/services/solar-energy.png',
+  'Power Systems': '/images/services/solar-energy.png',
+  Installation: '/images/services/electrical-installation.png',
+  'Protection & Security': '/images/services/protection-security.png',
 }
 
 const catalogue: Service[] = [
