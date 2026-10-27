@@ -1,5 +1,5 @@
-import Link from 'next/link'
 import { redirect } from 'next/navigation'
+import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 
 export default async function Admin() {
@@ -20,13 +20,16 @@ export default async function Admin() {
 
   if (!isAdmin) {
     return (
-      <main className="min-h-screen bg-[#101D35] px-5 py-20 text-white">
-        <div className="mx-auto max-w-md text-center">
-          <p className="text-sm tracking-[.28em] text-[#c9a24d]">ACCESS DENIED</p>
-          <h1 className="mt-4 text-3xl font-semibold">Administrator access required</h1>
-          <p className="mt-4 text-white/70">Ask a site admin to grant access to this account.</p>
-          <Link href="/" className="mt-6 inline-block rounded-full bg-white px-5 py-3 text-sm font-medium text-[#101D35]">
-            Back home
+      <main className="min-h-screen bg-slate-950 px-5 py-20 text-white">
+        <div className="mx-auto max-w-xl rounded-[32px] border border-white/10 bg-white/5 p-8 text-center backdrop-blur-sm">
+          <p className="text-xs font-semibold uppercase tracking-[0.3em] text-amber-400">Access denied</p>
+          <h1 className="mt-4 text-4xl font-semibold">Administrator access required</h1>
+          <p className="mt-4 text-slate-300">Ask a site admin to grant access to this account.</p>
+          <Link
+            href="/"
+            className="mt-8 inline-flex rounded-full bg-white px-6 py-3 text-sm font-medium text-slate-900 transition hover:-translate-y-0.5"
+          >
+            Return home
           </Link>
         </div>
       </main>
@@ -41,36 +44,40 @@ export default async function Admin() {
   ])
 
   return (
-    <main className="min-h-screen bg-[#F3F5F8] px-5 py-8 text-[#101D35]">
+    <main className="min-h-screen bg-[#f5f7fb] px-5 py-8 text-slate-900">
       <div className="mx-auto max-w-6xl">
-        <div className="flex items-start justify-between gap-4">
+        <div className="mb-8 flex items-center justify-between gap-4">
           <div>
-            <p className="text-sm font-semibold tracking-[.28em] text-[#8d6d2d]">ADMIN</p>
-            <h1 className="mt-3 text-4xl font-semibold">Dashboard</h1>
+            <p className="text-xs font-semibold uppercase tracking-[0.32em] text-amber-600">Admin</p>
+            <h1 className="mt-2 text-4xl font-semibold">Operations dashboard</h1>
           </div>
-          <Link href="/" className="rounded-full border border-[#d7d1c7] bg-white px-4 py-2 text-sm font-medium text-[#101D35]">
+
+          <Link
+            href="/"
+            className="rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-900 shadow-sm transition hover:-translate-y-0.5"
+          >
             View site
           </Link>
         </div>
 
-        <div className="mt-8 grid gap-4 md:grid-cols-3">
+        <div className="grid gap-4 md:grid-cols-3">
           <Metric label="Total quotes" value={total ?? 0} />
           <Metric label="Under review" value={underReview ?? 0} />
           <Metric label="Accepted" value={accepted ?? 0} />
         </div>
 
-        <section className="mt-8 rounded-2xl border border-[#dfdbd1] bg-white p-5 shadow-sm">
-          <div className="flex items-center justify-between gap-4">
-            <h2 className="text-xl font-semibold">Recent quotations</h2>
-            <Link href="/admin/quotations" className="text-sm font-semibold text-[#8d6d2d]">
+        <section className="mt-8 rounded-[28px] border border-slate-200 bg-white p-6 shadow-[0_20px_60px_rgba(15,23,42,0.06)]">
+          <div className="mb-5 flex items-center justify-between">
+            <h2 className="text-2xl font-semibold">Recent quotations</h2>
+            <Link href="/admin/quotations" className="text-sm font-semibold text-amber-700">
               View all
             </Link>
           </div>
 
-          <div className="mt-5 overflow-x-auto">
+          <div className="overflow-x-auto">
             <table className="min-w-full text-left text-sm">
-              <thead className="text-[#5b5a54]">
-                <tr>
+              <thead>
+                <tr className="text-slate-500">
                   <th className="pb-3 font-medium">Reference</th>
                   <th className="pb-3 font-medium">Status</th>
                   <th className="pb-3 font-medium">Amount</th>
@@ -79,11 +86,11 @@ export default async function Admin() {
               </thead>
               <tbody>
                 {(recent ?? []).map((quote) => (
-                  <tr key={quote.reference} className="border-t border-[#f0ece5]">
-                    <td className="py-3 font-medium text-[#101D35]">{quote.reference}</td>
-                    <td className="py-3 capitalize text-[#4d4b48]">{quote.status}</td>
-                    <td className="py-3 text-[#101D35]">K {Number(quote.total_amount ?? 0).toFixed(2)}</td>
-                    <td className="py-3 text-[#4d4b48]">
+                  <tr key={quote.reference} className="border-t border-slate-200">
+                    <td className="py-3 font-medium text-slate-900">{quote.reference}</td>
+                    <td className="py-3 capitalize text-slate-600">{quote.status}</td>
+                    <td className="py-3 font-medium text-slate-900">K {Number(quote.total_amount ?? 0).toFixed(2)}</td>
+                    <td className="py-3 text-slate-600">
                       {quote.submitted_at ? new Date(quote.submitted_at).toLocaleDateString() : '—'}
                     </td>
                   </tr>
@@ -99,9 +106,9 @@ export default async function Admin() {
 
 function Metric({ label, value }: { label: string; value: number }) {
   return (
-    <div className="rounded-2xl border border-[#dfdbd1] bg-white p-5 shadow-sm">
-      <p className="text-sm text-black/55">{label}</p>
-      <p className="mt-3 text-3xl font-semibold text-[#101D35]">{value}</p>
+    <div className="rounded-[24px] border border-slate-200 bg-white p-5 shadow-[0_16px_40px_rgba(15,23,42,0.04)]">
+      <p className="text-sm text-slate-500">{label}</p>
+      <p className="mt-3 text-3xl font-semibold text-slate-900">{value}</p>
     </div>
   )
 }
