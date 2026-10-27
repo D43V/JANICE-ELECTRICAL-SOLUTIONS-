@@ -1,3 +1,64 @@
 import Link from "next/link"
-import { Menu, ArrowUpRight } from "lucide-react"
-export function SiteHeader(){return <header className="border-b border-white/10 bg-[#101D35] text-white"><div className="container flex h-[74px] items-center justify-between"><Link href="/" aria-label="JANICE ELECTRICAL SOLUTIONS home" className="flex items-center gap-3"><span className="relative flex size-11 items-center justify-center rounded-xl border border-[#D4AF65]/70 bg-[#D4AF65] text-lg font-black tracking-[-.08em] text-[#101D35] shadow-[0_8px_24px_rgba(212,175,101,.2)]"><span className="absolute -bottom-1 -right-1 size-3 rounded-full border-2 border-[#101D35] bg-[#D4AF65]" aria-hidden="true"/>JA</span><span className="hidden leading-tight sm:block"><span className="block text-sm font-black tracking-[.18em] text-white">JA</span><span className="block text-[10px] font-semibold tracking-[.18em] text-[#D4AF65]">ELECTRICAL SOLUTIONS</span></span></Link><nav className="hidden items-center gap-7 text-sm font-semibold md:flex"><Link href="/services">Services</Link><Link href="/about">About</Link><Link href="/contact">Contact</Link><Link href="/admin/login" className="text-[#6e6c67]">Admin</Link></nav><div className="flex items-center gap-2"><Link href="/get-a-quote" className="btn btn-gold hidden sm:inline-flex">Get a quote <ArrowUpRight className="ml-2" size={16}/></Link><button aria-label="Open menu" className="flex size-11 items-center justify-center rounded border border-[#dedbd3] md:hidden"><Menu size={20}/></button></div></div></header>}
+import { ArrowUpRight, Menu } from "lucide-react"
+
+const navItems = [
+  { href: "/", label: "Home" },
+  { href: "/about", label: "About" },
+  { href: "/services", label: "Services" },
+  { href: "/get-a-quote", label: "Quote" },
+  { href: "/contact", label: "Contact" },
+]
+
+export function SiteHeader() {
+  return (
+    <header className="border-b border-slate-200 bg-[#101D35] text-white shadow-sm">
+      <div className="container mx-auto flex h-[74px] items-center justify-between px-5">
+        <Link href="/" aria-label="JANICE ELECTRICAL SOLUTIONS home" className="flex items-center gap-3">
+          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#D4AF65] text-sm font-bold text-slate-900">
+            JA
+          </div>
+          <div>
+            <div className="text-sm font-semibold tracking-[0.18em] text-white/90">JANICE</div>
+            <div className="text-[10px] uppercase tracking-[0.22em] text-white/60">Electrical Solutions</div>
+          </div>
+        </Link>
+
+        <nav className="hidden items-center gap-7 md:flex">
+          {navItems.map((item) => (
+            <Link
+              key={item.href}
+              href={item.href}
+              className="text-sm font-medium text-white/75 transition hover:text-white"
+            >
+              {item.label}
+            </Link>
+          ))}
+        </nav>
+
+        <div className="hidden items-center gap-3 md:flex">
+          <Link
+            href="/contact"
+            className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-4 py-2 text-sm font-medium text-white transition hover:bg-white/10"
+          >
+            Book a consultation
+          </Link>
+          <Link
+            href="/get-a-quote"
+            className="inline-flex items-center gap-2 rounded-full bg-[#D4AF65] px-4 py-2 text-sm font-semibold text-slate-900 transition hover:bg-[#e6c984]"
+          >
+            Get a quote
+            <ArrowUpRight className="size-4" />
+          </Link>
+        </div>
+
+        <button
+          type="button"
+          aria-label="Open menu"
+          className="inline-flex items-center justify-center rounded-full border border-white/10 bg-white/5 p-2 text-white md:hidden"
+        >
+          <Menu className="size-5" />
+        </button>
+      </div>
+    </header>
+  )
+}
