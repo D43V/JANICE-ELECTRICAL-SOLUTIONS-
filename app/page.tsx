@@ -14,6 +14,18 @@ const services = [
     name: 'Commercial projects',
     desc: 'Scalable electrical solutions for growth-focused businesses and facilities.',
   },
+  {
+    name: 'Lighting design',
+    desc: 'Energy-efficient lighting layouts tailored to your space and usage patterns.',
+  },
+  {
+    name: 'Security systems',
+    desc: 'Reliable wiring and integration for access, alarms, and visibility upgrades.',
+  },
+  {
+    name: 'Emergency callouts',
+    desc: 'Rapid-response support when urgent electrical issues need immediate attention.',
+  },
 ]
 
 export default function Home() {
@@ -38,7 +50,7 @@ export default function Home() {
 
               <div className="mt-8 flex flex-wrap gap-4">
                 <Link
-                  href="/#quote"
+                  href="/get-a-quote"
                   className="inline-flex items-center gap-2 rounded-full bg-slate-900 px-6 py-3 text-sm font-medium text-white transition hover:-translate-y-0.5 hover:bg-slate-800"
                 >
                   Request a quote
@@ -46,10 +58,10 @@ export default function Home() {
                 </Link>
 
                 <Link
-                  href="/contact"
+                  href="/services"
                   className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-6 py-3 text-sm font-medium text-slate-900 shadow-sm transition hover:-translate-y-0.5"
                 >
-                  Book a consultation
+                  Browse catalogue
                 </Link>
               </div>
 
@@ -107,14 +119,14 @@ export default function Home() {
         </div>
       </section>
 
-      <section className="mx-auto max-w-6xl px-5 py-20">
+      <section id="catalogue" className="mx-auto max-w-6xl px-5 py-20">
         <div className="flex items-end justify-between gap-4">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.28em] text-amber-600">What we do</p>
+            <p className="text-xs font-semibold uppercase tracking-[0.28em] text-amber-600">Catalogue</p>
             <h2 className="text-4xl font-semibold">Services built around your property.</h2>
           </div>
 
-          <Link href="/contact" className="hidden text-sm font-medium text-slate-700 md:inline-flex">
+          <Link href="/services" className="hidden text-sm font-medium text-slate-700 md:inline-flex">
             Explore more
             <ChevronDown className="size-4" />
           </Link>
@@ -131,10 +143,13 @@ export default function Home() {
               </div>
               <h3 className="text-2xl font-semibold">{service.name}</h3>
               <p className="mt-3 text-slate-600">{service.desc}</p>
-              <div className="mt-5 inline-flex items-center gap-2 text-sm font-medium text-slate-900">
+              <Link
+                href="/get-a-quote"
+                className="mt-5 inline-flex items-center gap-2 text-sm font-medium text-slate-900"
+              >
                 Learn more
                 <ArrowRight className="size-4" />
-              </div>
+              </Link>
             </article>
           ))}
         </div>
@@ -182,6 +197,25 @@ export default function Home() {
                 </div>
               </div>
             </div>
+          </div>
+        </div>
+      </section>
+
+      <section className="mx-auto max-w-6xl px-5 py-20">
+        <div className="rounded-[32px] border border-slate-200 bg-white p-8 shadow-[0_20px_60px_rgba(15,23,42,0.06)]">
+          <div className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.28em] text-amber-600">Need a tailored quote?</p>
+              <h2 className="mt-2 text-3xl font-semibold text-slate-900">Tell us about your project and we’ll map the right solution.</h2>
+            </div>
+
+            <Link
+              href="/get-a-quote"
+              className="inline-flex items-center justify-center gap-2 rounded-full bg-slate-900 px-6 py-3 text-sm font-medium text-white transition hover:-translate-y-0.5 hover:bg-slate-800"
+            >
+              Start your quote
+              <ArrowRight className="size-4" />
+            </Link>
           </div>
         </div>
       </section>
