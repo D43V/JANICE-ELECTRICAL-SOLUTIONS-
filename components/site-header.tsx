@@ -1,7 +1,7 @@
 import Link from "next/link"
 import { Menu, ArrowUpRight } from "lucide-react"
 
-const companyLogo = "https://hebbkx1anhila5yf.public.blob.vercel-storage.com/Image-BE8B060F-fYutj03o9wgMRfg6nw8kUk0xLhSpsB.jpeg"
+const companyLogo = "/images/brand/janice-logo.jpeg"
 
 export function SiteHeader() {
   return (
