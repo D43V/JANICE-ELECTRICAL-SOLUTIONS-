@@ -1,49 +1,21 @@
 import Link from "next/link"
 import { Menu, ArrowUpRight } from "lucide-react"
 
-const nav = [
-  { href: "/about", label: "About" },
-  { href: "/services", label: "Services" },
-  { href: "/get-a-quote", label: "Get a quote" },
-  { href: "/contact", label: "Contact" },
-]
+const companyLogo = "/images/brand/janice-logo.jpeg"
 
 export function SiteHeader() {
   return (
     <header className="border-b border-white/10 bg-[#101D35] text-white">
-      <div className="container flex h-[74px] items-center justify-between gap-5">
-        <Link href="/" aria-label="JANICE Electrical Solutions home" className="flex items-center gap-3 shrink-0">
-          <img
-            src="/janice-logo.svg"
-            alt="JANICE Electrical Solutions"
-            className="h-11 w-auto object-contain"
-          />
+      <div className="container flex min-h-[74px] items-center justify-between gap-4 py-2">
+        <Link href="/" aria-label="JANICE ELECTRICAL SOLUTIONS home" className="flex min-w-0 items-center gap-3">
+          <img src={companyLogo} alt="JANICE ELECTRICAL SOLUTIONS logo" className="size-12 shrink-0 rounded-lg object-contain" />
+          <span className="min-w-0 leading-tight">
+            <span className="block truncate text-[11px] font-black tracking-[.12em] text-white sm:text-sm">JANICE</span>
+            <span className="block truncate text-[9px] font-semibold tracking-[.1em] text-[#D4AF65] sm:text-[10px]">ELECTRICAL SOLUTIONS</span>
+          </span>
         </Link>
-
-        <nav className="hidden items-center gap-8 text-sm font-medium md:flex">
-          {nav.map((item) => (
-            <Link key={item.href} href={item.href} className="text-white/80 transition hover:text-white">
-              {item.label}
-            </Link>
-          ))}
-        </nav>
-
-        <div className="flex items-center gap-3">
-          <Link
-            href="/get-a-quote"
-            className="inline-flex items-center gap-2 rounded-full border border-[#D4AF65] bg-[#D4AF65] px-4 py-2 text-sm font-semibold text-[#101D35] transition hover:brightness-110"
-          >
-            Book a call
-            <ArrowUpRight className="h-4 w-4" />
-          </Link>
-          <button
-            type="button"
-            aria-label="Open menu"
-            className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-white/10 text-white md:hidden"
-          >
-            <Menu className="h-5 w-5" />
-          </button>
-        </div>
+        <nav className="hidden items-center gap-7 text-sm font-semibold md:flex"><Link href="/services">Services</Link><Link href="/about">About</Link><Link href="/contact">Contact</Link><Link href="/admin/login" className="text-[#6e6c67]">Admin</Link></nav>
+        <div className="flex items-center gap-2"><Link href="/get-a-quote" className="btn btn-gold hidden sm:inline-flex">Get a quote <ArrowUpRight className="ml-2" size={16}/></Link><button aria-label="Open menu" className="flex size-11 items-center justify-center rounded border border-[#dedbd3] md:hidden"><Menu size={20}/></button></div>
       </div>
     </header>
   )

@@ -1,6 +1,8 @@
 import { QuoteForm } from '@/components/quote-form'
 import { createClient } from '@/lib/supabase/server'
 
+export const dynamic = 'force-dynamic'
+
 export default async function QuotePage() {
   const supabase = await createClient()
   const { data } = await supabase.from('services').select('slug,name,base_price,description').eq('is_active', true).order('name')
