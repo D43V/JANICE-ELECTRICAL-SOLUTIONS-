@@ -14,6 +14,23 @@ const imageByCategory: Record<string, string> = {
   'Protection & Security': '/images/services/protection-security.png',
 }
 
+const electricFencePhotos = [
+  'https://hebbkx1anhila5yf.public.blob.vercel-storage.com/Image-2AC05C8B-PZq2pSdGcaNrNa2wRNCSfy9O3F6Xtv.jpeg',
+  'https://hebbkx1anhila5yf.public.blob.vercel-storage.com/Image-F44A5540-1ynExJAOEcvqW20BtjKebq7e2DGum3.jpeg',
+  'https://hebbkx1anhila5yf.public.blob.vercel-storage.com/Image-ADFA6EB5-Cy2BLedEi8U4RCan8KrSARqgG3Iamf.jpeg',
+  'https://hebbkx1anhila5yf.public.blob.vercel-storage.com/Image-ECF0DAB4-19VmojFE63QbYrGxNvsmE4Hoj3emxy.jpeg',
+  'https://hebbkx1anhila5yf.public.blob.vercel-storage.com/Image-B901E22A-prbhgUzYifllzDA3mG5TNKlqxKU1w4.jpeg',
+  'https://hebbkx1anhila5yf.public.blob.vercel-storage.com/Image-90A6D133-CCPaPHdMoeBEkZPL7BUxdoJ44K6eDy.jpeg',
+  'https://hebbkx1anhila5yf.public.blob.vercel-storage.com/Image-7D8F9C73-2RxCnxnnVtEQ0VgOziL8TrKVGku6uC.jpeg',
+  'https://hebbkx1anhila5yf.public.blob.vercel-storage.com/Image-C275497C-SmuCGE7N1VqNn9n1icvEg5rhm4uJC9.jpeg',
+  'https://hebbkx1anhila5yf.public.blob.vercel-storage.com/Image-0A186137-6CHoSYSr3gq2ceCUwVSXD79gxVSq2C.jpeg',
+  'https://hebbkx1anhila5yf.public.blob.vercel-storage.com/Image-1A56C732-jRGJhllJG0Dpuwb9tn6ONDHn1R4Ubd.jpeg',
+  'https://hebbkx1anhila5yf.public.blob.vercel-storage.com/Image-7A6609E4-SZpv4JuXSKpx4JA99sNGLAoFLUPkkQ.jpeg',
+  'https://hebbkx1anhila5yf.public.blob.vercel-storage.com/Image-A3D958EB-xswttpk8kDFoe9kkED3ughnX25AHg7.jpeg',
+  'https://hebbkx1anhila5yf.public.blob.vercel-storage.com/Image-4818BF2E-vgGW5cHV8F2cZK1WzaTytlM5r2gGlV.jpeg',
+  'https://hebbkx1anhila5yf.public.blob.vercel-storage.com/Image-160832EC-JaEokkbY3KAMLmEmHex8LyLAKYljkd.jpeg',
+]
+
 const catalogue: Service[] = [
   { name: 'Single-Line Diagram (SLD) Drafting', category: 'Design & Planning', description: 'Clear electrical schematics prepared for planning, review and installation.' },
   { name: 'Electrical Load Sizing & Analysis', category: 'Design & Planning', description: 'Practical load calculations to support safe, reliable system design.' },
@@ -43,5 +60,5 @@ export default async function Services() {
   const { data: liveServices } = await supabase.from('services').select('name,description,category,image_path').eq('is_active', true).order('name')
   const services = liveServices?.length ? liveServices : catalogue
 
-  return <main><section className="bg-[#101D35] py-16 text-white"><div className="container"><p className="eyebrow mb-4 text-[#D4AF65]">Our services</p><h1 className="text-5xl font-semibold">Practical expertise.<br/>Clear outcomes.</h1><p className="mt-6 max-w-xl text-white/70">Professional electrical, power, solar and protection services for projects that need dependable results.</p></div></section><section className="container py-14"><div className="grid-auto">{services.map((service, index) => { const image = service.image_path || imageByCategory[service.category] || '/images/ja/IMG_5913.JPG'; return <article className="card overflow-hidden" key={service.name}><div className="relative aspect-[16/10] bg-[#101D35]"><Image src={image} alt={`${service.name} project`} fill sizes="(max-width: 768px) 100vw, 33vw" className="object-cover" /></div><div className="flex min-h-56 flex-col p-6"><span className="text-sm text-[#9a7833]">{String(index + 1).padStart(2, '0')} / {service.category}</span><h2 className="mt-auto text-2xl font-semibold">{service.name}</h2><p className="mt-3 text-sm leading-6 text-[#6e6c67]">{service.description}</p><Link href="/get-a-quote" className="mt-5 text-sm font-bold underline underline-offset-4">Get a quote →</Link></div></article>})}</div></section></main>
+  return <main><section className="bg-[#101D35] py-16 text-white"><div className="container"><p className="eyebrow mb-4 text-[#D4AF65]">Our services</p><h1 className="text-5xl font-semibold">Practical expertise.<br/>Clear outcomes.</h1><p className="mt-6 max-w-xl text-white/70">Professional electrical, power, solar and protection services for projects that need dependable results.</p></div></section><section className="container py-14"><div className="grid-auto">{services.map((service, index) => { const isElectricFence = service.name === 'Electric Fence'; const image = service.image_path || imageByCategory[service.category] || '/images/ja/IMG_5913.JPG'; return <article className="card overflow-hidden" key={service.name}>{isElectricFence ? <div className="grid grid-cols-2 gap-1 bg-[#101D35] sm:grid-cols-3">{electricFencePhotos.map((photo, photoIndex) => <div className="relative aspect-square" key={photo}><Image src={photo} alt={`Electric fence installation photo ${photoIndex + 1}`} fill sizes="(max-width: 768px) 50vw, 20vw" className="object-cover" /></div>)}</div> : <div className="relative aspect-[16/10] bg-[#101D35]"><Image src={image} alt={`${service.name} project`} fill sizes="(max-width: 768px) 100vw, 33vw" className="object-cover" /></div>}<div className="flex min-h-56 flex-col p-6"><span className="text-sm text-[#9a7833]">{String(index + 1).padStart(2, '0')} / {service.category}</span><h2 className="mt-auto text-2xl font-semibold">{service.name}</h2><p className="mt-3 text-sm leading-6 text-[#6e6c67]">{service.description}</p><Link href="/get-a-quote" className="mt-5 text-sm font-bold underline underline-offset-4">Get a quote →</Link></div></article>})}</div></section></main>
 }
