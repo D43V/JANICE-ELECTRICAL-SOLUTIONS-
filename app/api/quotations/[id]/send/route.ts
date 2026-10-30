@@ -19,7 +19,7 @@ export async function POST(_request: Request, { params }: { params: Promise<{ id
   const pdf = await createQuotationPdf({ reference: quote.reference, version: 1, customer: customer.full_name, email: customer.email, items, subtotal: quote.subtotal / 100, total: quote.total_amount / 100, validUntil: quote.valid_until ?? undefined })
   const { data: log } = await supabase.from('email_logs').insert({ quotation_id: quote.id, recipient: customer.email, email_type: 'official_quotation', status: 'pending', attempt_count: 1 }).select('id').single()
   try {
-    const result = await sendQuotationNotification({ to: customer.email, subject: `JA quotation ${quote.reference}`, html: `<p>Dear ${customer.full_name},</p><p>Please find your official quotation attached.</p><p>Reference: <strong>${quote.reference}</strong></p>`, pdf })
+    const result = await sendQuotationNotification({ to: customer.email, subject: `Janice Electrical Solutions quotation ${quote.reference}`, html: `<p>Dear ${customer.full_name},</p><p>Please find your official quotation attached.</p><p>Reference: <strong>${quote.reference}</strong></p>`, pdf })
     const providerMessageId = result.data?.id ?? null
     await supabase.from('email_logs').update({ status: 'accepted', provider_message_id: providerMessageId, sent_at: new Date().toISOString() }).eq('id', log?.id)
     await supabase.from('quotations').update({ status: 'sent', sent_at: new Date().toISOString(), updated_at: new Date().toISOString() }).eq('id', quote.id)
